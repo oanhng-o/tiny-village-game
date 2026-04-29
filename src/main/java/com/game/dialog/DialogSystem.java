@@ -241,14 +241,16 @@ public class DialogSystem {
             gc.fillText(name, tagX + 10, tagY + 20);
         }
 
-        // Dialog text (with typewriter effect)
-        gc.setFill(Color.web("#4A4A4A"));
-        gc.setFont(Font.font("Monospaced", 15));
-        if (displayText != null && charIndex > 0) {
-            String visibleText = displayText.substring(0, Math.min(charIndex, displayText.length()));
-            // Word wrap
-            renderWrappedText(gc, visibleText, boxX + TEXT_PADDING + 10, boxY + 40,
-                            boxW - TEXT_PADDING * 2 - 20, 22);
+        // Dialog text (with typewriter effect) - chỉ hiển thị khi đang show text, không phải khi show choices
+        if (state == State.SHOWING_TEXT) {
+            gc.setFill(Color.web("#4A4A4A"));
+            gc.setFont(Font.font("Monospaced", 15));
+            if (displayText != null && charIndex > 0) {
+                String visibleText = displayText.substring(0, Math.min(charIndex, displayText.length()));
+                // Word wrap
+                renderWrappedText(gc, visibleText, boxX + TEXT_PADDING + 10, boxY + 40,
+                                boxW - TEXT_PADDING * 2 - 20, 22);
+            }
         }
 
         // Continue indicator

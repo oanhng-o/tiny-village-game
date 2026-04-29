@@ -33,6 +33,7 @@ public class GameWorld {
 
     private DialogSystem dialogSystem;
     private QuestSystem questSystem;
+    private MapOverlay mapOverlay;
 
     // Pickup notification
     private String pickupNotification = null;
@@ -66,6 +67,9 @@ public class GameWorld {
 
         // Create cat
         cat = new CatFollower(25 * TileMap.TILE_SIZE, 22 * TileMap.TILE_SIZE);
+
+        // Create minimap
+        mapOverlay = new MapOverlay(tileMap);
 
         // Setup quest callbacks
         dialogSystem.setOnQuestStart(() -> {
@@ -152,6 +156,11 @@ public class GameWorld {
     public void update(double dt, InputHandler input) {
         // Update dialog system
         dialogSystem.update(dt);
+
+        // Handle map overlay toggle
+        if (input.isKeyJustPressed(KeyCode.M)) {
+            mapOverlay.toggle();
+        }
 
         if (dialogSystem.isActive()) {
             // Dialog active → only handle dialog input
@@ -249,6 +258,9 @@ public class GameWorld {
         // Quest indicator
         dialogSystem.renderQuestIndicator(gc);
 
+        // Minimap overlay
+        mapOverlay.render(gc, tileMap, player, npcs, items, cat);
+
         // Pickup notification
         renderPickupNotification(gc);
 
@@ -291,6 +303,13 @@ public class GameWorld {
     private void renderControlsHint(GraphicsContext gc) {
         gc.setFill(Color.web("#FFFFFF", 0.4));
         gc.setFont(Font.font("Monospaced", 10));
-        gc.fillText("WASD: Di chuyển | E: Nói chuyện | Space: Tiếp tục", 10, GameApplication.WINDOW_HEIGHT - 10);
+        gc.fillText("WASD: Di chuyển | E: Nói chuyện | M: Bản đồ | Space: Tiếp tục", 10, GameApplication.WINDOW_HEIGHT - 10);
     }
+
+    // Getters for MapOverlay
+    public TileMap getTileMap() { return tileMap; }
+    public Player getPlayer() { return player; }
+    public List<NPC> getNPCs() { return npcs; }
+    public List<Item> getItems() { return items; }
+    public CatFollower getCat() { return cat; }
 }

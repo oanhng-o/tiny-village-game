@@ -1,8 +1,8 @@
 package com.game.world;
 
-import com.game.GameApplication;
 import com.game.util.AssetManager;
 import com.game.util.SpriteSheet;
+import com.game.util.Constants;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -182,9 +182,9 @@ public class TileMap {
      */
     public void renderGround(GraphicsContext gc, double camX, double camY) {
         int startCol = Math.max(0, (int)(camX / TILE_SIZE));
-        int endCol = Math.min(MAP_COLS - 1, (int)((camX + GameApplication.WINDOW_WIDTH) / TILE_SIZE) + 1);
+        int endCol = Math.min(MAP_COLS - 1, (int)((camX + Constants.WINDOW_WIDTH) / TILE_SIZE) + 1);
         int startRow = Math.max(0, (int)(camY / TILE_SIZE));
-        int endRow = Math.min(MAP_ROWS - 1, (int)((camY + GameApplication.WINDOW_HEIGHT) / TILE_SIZE) + 1);
+        int endRow = Math.min(MAP_ROWS - 1, (int)((camY + Constants.WINDOW_HEIGHT) / TILE_SIZE) + 1);
 
         gc.setImageSmoothing(false);
 
@@ -207,9 +207,9 @@ public class TileMap {
      */
     public void renderDecorations(GraphicsContext gc, double camX, double camY) {
         int startCol = Math.max(0, (int)(camX / TILE_SIZE));
-        int endCol = Math.min(MAP_COLS - 1, (int)((camX + GameApplication.WINDOW_WIDTH) / TILE_SIZE) + 1);
+        int endCol = Math.min(MAP_COLS - 1, (int)((camX + Constants.WINDOW_WIDTH) / TILE_SIZE) + 1);
         int startRow = Math.max(0, (int)(camY / TILE_SIZE));
-        int endRow = Math.min(MAP_ROWS - 1, (int)((camY + GameApplication.WINDOW_HEIGHT) / TILE_SIZE) + 1);
+        int endRow = Math.min(MAP_ROWS - 1, (int)((camY + Constants.WINDOW_HEIGHT) / TILE_SIZE) + 1);
 
         gc.setImageSmoothing(false);
 

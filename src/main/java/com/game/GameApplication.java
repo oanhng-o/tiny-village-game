@@ -2,6 +2,7 @@ package com.game;
 
 import com.game.core.GameLoop;
 import com.game.core.InputHandler;
+import com.game.util.Constants;
 import com.game.world.GameWorld;
 
 import javafx.application.Application;
@@ -19,9 +20,6 @@ import javafx.stage.Stage;
  */
 public class GameApplication extends Application {
 
-    public static final int WINDOW_WIDTH = 800;
-    public static final int WINDOW_HEIGHT = 600;
-
     private Canvas canvas;
     private GraphicsContext gc;
     private GameLoop gameLoop;
@@ -38,16 +36,14 @@ public class GameApplication extends Application {
         primaryStage.setTitle("Tiny village");
         primaryStage.setResizable(false);
 
-        canvas = new Canvas(WINDOW_WIDTH, WINDOW_HEIGHT);
+        canvas = new Canvas(Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
         gc = canvas.getGraphicsContext2D();
 
         // Pixel art: tắt anti-aliasing để giữ sharp pixels
         gc.setImageSmoothing(false);
 
         StackPane root = new StackPane(canvas);
-        Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-        // Setup input handler
+        Scene scene = new Scene(root, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
         inputHandler = InputHandler.getInstance();
         scene.setOnKeyPressed(e -> inputHandler.keyPressed(e.getCode()));
         scene.setOnKeyReleased(e -> inputHandler.keyReleased(e.getCode()));
@@ -111,17 +107,17 @@ public class GameApplication extends Application {
     private void renderCharacterSelect(double bounceTimer) {
         // Background gradient (Sky to Grass)
         javafx.scene.paint.LinearGradient bgGradient = new javafx.scene.paint.LinearGradient(
-            0, 0, 0, WINDOW_HEIGHT, false, javafx.scene.paint.CycleMethod.NO_CYCLE,
+            0, 0, 0, Constants.WINDOW_HEIGHT, false, javafx.scene.paint.CycleMethod.NO_CYCLE,
             new javafx.scene.paint.Stop(0, Color.web("#E0F7FA")),
             new javafx.scene.paint.Stop(1, Color.web("#B2EBF2"))
         );
         gc.setFill(bgGradient);
-        gc.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        gc.fillRect(0, 0, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
 
         // Clouds background
         gc.setFill(Color.web("#ffffff", 0.8));
         for (int i = 0; i < 5; i++) {
-            double sx = (bounceTimer * 20 + i * 200) % (WINDOW_WIDTH + 150) - 100;
+            double sx = (bounceTimer * 20 + i * 200) % (Constants.WINDOW_WIDTH + 150) - 100;
             double sy = 50 + (i * 73) % 150;
             gc.fillRoundRect(sx, sy, 80, 40, 30, 30);
             gc.fillRoundRect(sx + 20, sy - 20, 50, 50, 25, 25);
@@ -134,20 +130,20 @@ public class GameApplication extends Application {
         double titleWidth = title.length() * 24; // approximate width
         gc.setStroke(Color.WHITE);
         gc.setLineWidth(4);
-        gc.strokeText(title, (WINDOW_WIDTH - titleWidth) / 2, 100);
+        gc.strokeText(title, (Constants.WINDOW_WIDTH - titleWidth) / 2, 100);
         gc.setFill(Color.web("#5D4037"));
-        gc.fillText(title, (WINDOW_WIDTH - titleWidth) / 2, 100);
+        gc.fillText(title, (Constants.WINDOW_WIDTH - titleWidth) / 2, 100);
 
         // Subtitle
         gc.setFill(Color.web("#5D4037", 0.8));
         gc.setFont(Font.font("Monospaced", 18));
         String subtitle = "Chọn nhân vật của bạn";
         double subWidth = subtitle.length() * 10;
-        gc.fillText(subtitle, (WINDOW_WIDTH - subWidth) / 2, 140);
+        gc.fillText(subtitle, (Constants.WINDOW_WIDTH - subWidth) / 2, 140);
 
         // Character previews
-        double girlX = WINDOW_WIDTH / 2 - 130;
-        double boyX = WINDOW_WIDTH / 2 + 50;
+        double girlX = Constants.WINDOW_WIDTH / 2 - 130;
+        double boyX = Constants.WINDOW_WIDTH / 2 + 50;
         double charY = 250;
 
         // Draw cards
@@ -173,7 +169,7 @@ public class GameApplication extends Application {
         gc.setFont(Font.font("Monospaced", 14));
         String instr = "← → để chọn  |  ENTER để xác nhận";
         double instrWidth = instr.length() * 8.5;
-        gc.fillText(instr, (WINDOW_WIDTH - instrWidth) / 2, 500);
+        gc.fillText(instr, (Constants.WINDOW_WIDTH - instrWidth) / 2, 500);
     }
 
     /**

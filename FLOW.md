@@ -708,6 +708,21 @@ src/main/java/com/game/
 
 ---
 
+## 18. Custom Asset Loading
+
+```
+AssetManager.loadAll()
+    │
+    ├─► Kiểm tra file ảnh trong src/main/resources/assets/ (vd: player.png)
+    │   ├─ Nếu TỒN TẠI: Load Image từ file (Cho phép thay đổi giao diện không cần code)
+    │   └─ Nếu KHÔNG TỒN TẠI: Fallback gọi PixelArtGenerator tạo hình mặc định
+    │
+    └─► Đưa Image/SpriteSheet vào bộ nhớ (HashMap) để sử dụng
+```
+Game hỗ trợ thay đổi toàn bộ visual (nhân vật, map, item) chỉ bằng cách copy file `.png` (khung hình 32x32px) vào thư mục `assets`.
+
+---
+
 ## Tóm Tắt
 - **Engine**: Java 17 + JavaFX 21 Canvas 2D
 - **FPS**: 60 frames per second (60 Hz)
@@ -716,5 +731,6 @@ src/main/java/com/game/
 - **Input**: WASD movement, E interaction, Arrow keys for menus
 - **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI)
 - **State Management**: Character select → Gameplay loop → Dialog/Quest → Cat following
+- **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ theo roadmap trong PLAN.md.

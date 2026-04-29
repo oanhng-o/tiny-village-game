@@ -1,8 +1,8 @@
 package com.game.dialog;
 
-import com.game.GameApplication;
 import com.game.core.InputHandler;
 import com.game.entity.NPC;
+import com.game.util.Constants;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
@@ -205,8 +205,8 @@ public class DialogSystem {
     public void render(GraphicsContext gc) {
         if (state == State.INACTIVE) return;
 
-        double w = GameApplication.WINDOW_WIDTH;
-        double h = GameApplication.WINDOW_HEIGHT;
+        double w = Constants.WINDOW_WIDTH;
+        double h = Constants.WINDOW_HEIGHT;
         double boxX = BOX_MARGIN + 20;
         double boxY = h - BOX_HEIGHT - BOX_MARGIN;
         double boxW = w - BOX_MARGIN * 2 - 40;
@@ -346,7 +346,7 @@ public class DialogSystem {
         // Background
         gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 13));
         double qw = questText.length() * 8.5 + 20;
-        double qx = GameApplication.WINDOW_WIDTH - qw - 15;
+        double qx = Constants.WINDOW_WIDTH - qw - 15;
         double qy = 15;
         
         gc.setFill(Color.web("#FFF8DC", 0.9));

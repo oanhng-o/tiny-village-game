@@ -1,7 +1,7 @@
 package com.game.core;
 
-import com.game.GameApplication;
 import com.game.world.GameWorld;
+import com.game.util.Constants;
 
 import javafx.animation.AnimationTimer;
 import javafx.scene.canvas.GraphicsContext;
@@ -47,7 +47,7 @@ public class GameLoop extends AnimationTimer {
 
         // Clear screen
         gc.setFill(Color.web("#1a1a2e"));
-        gc.fillRect(0, 0, GameApplication.WINDOW_WIDTH, GameApplication.WINDOW_HEIGHT);
+        gc.fillRect(0, 0, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
 
         // Render game
         gameWorld.render(gc);

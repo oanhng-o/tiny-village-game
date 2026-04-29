@@ -1,6 +1,5 @@
 package com.game.world;
 
-import com.game.GameApplication;
 import com.game.core.Camera;
 import com.game.core.InputHandler;
 import com.game.dialog.DialogData;
@@ -8,6 +7,7 @@ import com.game.dialog.DialogSystem;
 import com.game.dialog.QuestSystem;
 import com.game.entity.*;
 import com.game.util.AssetManager;
+import com.game.util.Constants;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
@@ -280,7 +280,7 @@ public class GameWorld {
         if (pickupNotification == null) return;
 
         double alpha = Math.min(1.0, pickupTimer);
-        double w = GameApplication.WINDOW_WIDTH;
+        double w = Constants.WINDOW_WIDTH;
 
         // Slide in from top
         double slideY = pickupTimer > 2.5 ? (3.0 - pickupTimer) * 100 : 50;
@@ -303,7 +303,7 @@ public class GameWorld {
     private void renderControlsHint(GraphicsContext gc) {
         gc.setFill(Color.web("#FFFFFF", 0.4));
         gc.setFont(Font.font("Monospaced", 10));
-        gc.fillText("WASD: Di chuyển | E: Nói chuyện | M: Bản đồ | Space: Tiếp tục", 10, GameApplication.WINDOW_HEIGHT - 10);
+        gc.fillText("WASD: Di chuyển | E: Nói chuyện | M: Bản đồ | Space: Tiếp tục", 10, Constants.WINDOW_HEIGHT - 10);
     }
 
     // Getters for MapOverlay

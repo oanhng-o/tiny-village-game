@@ -46,11 +46,24 @@ public class InventorySystem {
             new RewardDefinition("bonsai", "Cây bonsai", Constants.KEY_REWARD_BONSAI)
     );
 
+    private static final List<RewardDefinition> FISH_REWARDS = List.of(
+            new RewardDefinition("fish_carp", "Cá chép", Constants.KEY_FISH_CARP),
+            new RewardDefinition("fish_perch", "Cá rô", Constants.KEY_FISH_PERCH),
+            new RewardDefinition("fish_catfish", "Cá trê", Constants.KEY_FISH_CATFISH),
+            new RewardDefinition("fish_goldfish", "Cá vàng", Constants.KEY_FISH_GOLDFISH)
+    );
+
     private final Map<String, Integer> itemCounts = new LinkedHashMap<>();
     private final Random random = new Random();
 
     public InventoryItem addRandomGardenReward() {
         RewardDefinition reward = GARDEN_REWARDS.get(random.nextInt(GARDEN_REWARDS.size()));
+        addItem(reward.id());
+        return toInventoryItem(reward, itemCounts.get(reward.id()));
+    }
+
+    public InventoryItem addRandomFishReward() {
+        RewardDefinition reward = FISH_REWARDS.get(random.nextInt(FISH_REWARDS.size()));
         addItem(reward.id());
         return toInventoryItem(reward, itemCounts.get(reward.id()));
     }
@@ -82,6 +95,11 @@ public class InventorySystem {
 
     private RewardDefinition findReward(String itemId) {
         for (RewardDefinition reward : GARDEN_REWARDS) {
+            if (reward.id().equals(itemId)) {
+                return reward;
+            }
+        }
+        for (RewardDefinition reward : FISH_REWARDS) {
             if (reward.id().equals(itemId)) {
                 return reward;
             }

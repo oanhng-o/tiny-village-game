@@ -11,6 +11,7 @@ import com.game.util.AssetManager;
 import com.game.util.Constants;
 
 import javafx.scene.canvas.GraphicsContext;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
@@ -37,6 +38,7 @@ public class GameWorld {
     private QuestSystem questSystem;
     private InventorySystem inventorySystem;
     private MapOverlay mapOverlay;
+    private FishingMiniGame fishingMiniGame;
     private boolean inventoryOpen = false;
 
     // Pickup notification
@@ -75,6 +77,7 @@ public class GameWorld {
 
         // Create minimap
         mapOverlay = new MapOverlay(tileMap);
+        fishingMiniGame = new FishingMiniGame();
 
         // Setup quest callbacks
         dialogSystem.setOnQuestStart((questId) -> {
@@ -193,6 +196,18 @@ public class GameWorld {
         // Update dialog system
         dialogSystem.update(dt);
 
+        if (fishingMiniGame.isActive()) {
+            FishingMiniGame.Result result = fishingMiniGame.update(dt, input);
+            if (result != FishingMiniGame.Result.NONE) {
+                finishFishing(result);
+            }
+            player.update(dt);
+            cat.update(dt);
+            camera.update(player.getCenterX(), player.getCenterY(), dt);
+            updatePickupNotification(dt);
+            return;
+        }
+
         if (inventoryOpen) {
             if (input.isKeyJustPressed(KeyCode.I) || input.isKeyJustPressed(KeyCode.ESCAPE)) {
                 inventoryOpen = false;
@@ -204,6 +219,13 @@ public class GameWorld {
         if (dialogSystem.isActive()) {
             // Dialog active → only handle dialog input
             dialogSystem.handleInput(input);
+            updatePickupNotification(dt);
+            return;
+        }
+
+        if (input.isKeyJustPressed(KeyCode.F) && canStartFishing()) {
+            mapOverlay.setVisible(false);
+            fishingMiniGame.start(player, getNearestWaterTile());
             updatePickupNotification(dt);
             return;
         }
@@ -264,6 +286,53 @@ public class GameWorld {
         updatePickupNotification(dt);
     }
 
+    private boolean canStartFishing() {
+        return player.getState() == Player.PlayerState.NORMAL
+                && questSystem.isQuestCompleted(QuestSystem.FISHING_ROD_QUEST_ID)
+                && getNearestWaterTile() != null;
+    }
+
+    private javafx.geometry.Point2D getNearestWaterTile() {
+        Rectangle2D bounds = player.getFullBounds();
+        double padding = 16;
+        Rectangle2D fishingArea = new Rectangle2D(
+                bounds.getMinX() - padding,
+                bounds.getMinY() - padding,
+                bounds.getWidth() + padding * 2,
+                bounds.getHeight() + padding * 2);
+
+        int startCol = Math.max(0, (int) Math.floor(fishingArea.getMinX() / TileMap.TILE_SIZE));
+        int endCol = Math.min(TileMap.MAP_COLS - 1, (int) Math.floor(fishingArea.getMaxX() / TileMap.TILE_SIZE));
+        int startRow = Math.max(0, (int) Math.floor(fishingArea.getMinY() / TileMap.TILE_SIZE));
+        int endRow = Math.min(TileMap.MAP_ROWS - 1, (int) Math.floor(fishingArea.getMaxY() / TileMap.TILE_SIZE));
+
+        for (int row = startRow; row <= endRow; row++) {
+            for (int col = startCol; col <= endCol; col++) {
+                if (tileMap.getTile(col, row) == Tile.WATER) {
+                    Rectangle2D tileBounds = new Rectangle2D(
+                            col * TileMap.TILE_SIZE,
+                            row * TileMap.TILE_SIZE,
+                            TileMap.TILE_SIZE,
+                            TileMap.TILE_SIZE);
+                    if (fishingArea.intersects(tileBounds)) {
+                        return new javafx.geometry.Point2D(col, row);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private void finishFishing(FishingMiniGame.Result result) {
+        player.setState(Player.PlayerState.NORMAL);
+        if (result == FishingMiniGame.Result.WIN) {
+            InventorySystem.InventoryItem reward = inventorySystem.addRandomFishReward();
+            showPickupNotification("🎣 Câu được: " + reward.getDisplayName() + "!");
+        } else if (result == FishingMiniGame.Result.LOSE) {
+            showPickupNotification("🐟 Cá chạy mất rồi!");
+        }
+    }
+
     /**
      * Render toàn bộ game.
      */
@@ -306,8 +375,27 @@ public class GameWorld {
         // Quest indicator
         dialogSystem.renderQuestIndicator(gc);
 
+        // Fishing indicator 'F'
+        if (canStartFishing()) {
+            double indicatorX = player.getCenterX() - camX - 10;
+            double indicatorY = player.getY() - camY - 24;
+
+            gc.setFill(Color.web("#000000", 0.6));
+            gc.fillRoundRect(indicatorX, indicatorY, 20, 20, 4, 4);
+            gc.setStroke(Color.web("#FFFFFF", 0.8));
+            gc.setLineWidth(1.5);
+            gc.strokeRoundRect(indicatorX, indicatorY, 20, 20, 4, 4);
+
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 14));
+            gc.fillText("F", indicatorX + 6, indicatorY + 15);
+        }
+
         // Minimap overlay
         mapOverlay.render(gc, tileMap, player, npcs, items, cat);
+
+        // Fishing mini-game
+        fishingMiniGame.render(gc, player, camX, camY);
 
         // Pickup notification
         renderPickupNotification(gc);
@@ -341,7 +429,7 @@ public class GameWorld {
     private void renderPickupNotification(GraphicsContext gc) {
         if (pickupNotification == null) return;
 
-        double alpha = Math.min(1.0, pickupTimer);
+        double alpha = Math.max(0.0, Math.min(1.0, pickupTimer));
         double w = Constants.WINDOW_WIDTH;
 
         // Slide in from top
@@ -363,9 +451,9 @@ public class GameWorld {
     }
 
     private void renderControlsHint(GraphicsContext gc) {
-        gc.setFill(Color.web("#FFFFFF", 0.4));
+        gc.setFill(Color.web("#FFFFFF", 1));
         gc.setFont(Font.font("Monospaced", 10));
-        gc.fillText("WASD: Di chuyển | E: Nói chuyện | M: Bản đồ | I: Kho | Space: Tiếp tục", 10, Constants.WINDOW_HEIGHT - 10);
+        gc.fillText("WASD: Di chuyển | E: Nói chuyện | F: Câu cá | M: Bản đồ | I: Kho | Space: Tiếp tục", 10, Constants.WINDOW_HEIGHT - 10);
     }
 
     private void renderInventoryOverlay(GraphicsContext gc) {

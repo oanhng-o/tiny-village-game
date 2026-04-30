@@ -15,11 +15,17 @@ import javafx.scene.input.KeyCode;
  */
 public class Player extends Entity {
 
+    public enum PlayerState {
+        NORMAL,
+        FISHING
+    }
+
     private static final double SPEED = 120.0; // pixels per second
     private static final int SPRITE_SIZE = 32;
 
     private int direction = 0; // 0=down, 1=left, 2=right, 3=up
     private boolean moving = false;
+    private PlayerState state = PlayerState.NORMAL;
     private SpriteSheet spriteSheet;
     private TileMap tileMap;
 
@@ -50,6 +56,11 @@ public class Player extends Entity {
      * Update player: xử lý input, di chuyển, collision.
      */
     public void handleInput(double dt, InputHandler input) {
+        if (state == PlayerState.FISHING) {
+            moving = false;
+            return;
+        }
+
         double dx = 0, dy = 0;
 
         if (input.isKeyDown(KeyCode.W) || input.isKeyDown(KeyCode.UP)) {
@@ -173,6 +184,14 @@ public class Player extends Entity {
         if (currentSprite != null) {
             gc.setImageSmoothing(false);
             gc.drawImage(currentSprite, x - camX, y - camY, width, height);
+            
+            if (state == PlayerState.FISHING) {
+                com.game.util.SpriteSheet rodSheet = AssetManager.getInstance().getSpriteSheet(com.game.util.Constants.KEY_FISHING_ROD_ACTION);
+                if (rodSheet != null) {
+                    javafx.scene.image.Image rodAction = rodSheet.getFrame(0, direction);
+                    gc.drawImage(rodAction, x - camX, y - camY, width, height);
+                }
+            }
         }
     }
 
@@ -189,6 +208,16 @@ public class Player extends Entity {
 
     public boolean hasFishingRod() { return hasFishingRod; }
     public void setHasFishingRod(boolean has) { this.hasFishingRod = has; }
+    public PlayerState getState() { return state; }
+    public void setState(PlayerState state) {
+        this.state = state;
+        if (state == PlayerState.FISHING) {
+            moving = false;
+            currentFrame = 0;
+            frameTimer = 0;
+            updateSprite();
+        }
+    }
     public int getDirection() { return direction; }
     public boolean isMoving() { return moving; }
 }

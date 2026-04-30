@@ -59,7 +59,12 @@ public class Constants {
     public static final String ASSET_REWARD_SUNFLOWER = "sunflower.png";
     public static final String ASSET_REWARD_TULIP = "tulip.png";
     public static final String ASSET_REWARD_BONSAI = "bonsai.png";
+    public static final String ASSET_FISH_CARP = "fish_carp.png";
+    public static final String ASSET_FISH_PERCH = "fish_perch.png";
+    public static final String ASSET_FISH_CATFISH = "fish_catfish.png";
+    public static final String ASSET_FISH_GOLDFISH = "fish_goldfish.png";
     public static final String ASSET_INTERACT_ICON = "interact_icon.png";
+    public static final String ASSET_FISHING_ROD_ACTION = "fishing_rod_action.png";
 
     // ==================== ASSET KEYS (cho AssetManager) ====================
     public static final String KEY_PLAYER = "player";
@@ -75,7 +80,12 @@ public class Constants {
     public static final String KEY_REWARD_SUNFLOWER = "sunflower";
     public static final String KEY_REWARD_TULIP = "tulip";
     public static final String KEY_REWARD_BONSAI = "bonsai";
+    public static final String KEY_FISH_CARP = "fish_carp";
+    public static final String KEY_FISH_PERCH = "fish_perch";
+    public static final String KEY_FISH_CATFISH = "fish_catfish";
+    public static final String KEY_FISH_GOLDFISH = "fish_goldfish";
     public static final String KEY_INTERACT_ICON = "interact_icon";
+    public static final String KEY_FISHING_ROD_ACTION = "fishing_rod_action";
 
     // ==================== ANIMATION FRAMES ====================
     public static final int PLAYER_ANIMATION_FRAMES = 4; // frames per direction

@@ -32,6 +32,7 @@ public class AssetManager {
     /**
      * Helper to load an image from resources, or fallback to generated one.
      */
+
     private Image loadOrGenerate(String filename, java.util.function.Supplier<Image> generator) {
         try {
             var resource = getClass().getResource("/assets/" + filename);
@@ -84,6 +85,11 @@ public class AssetManager {
                 new SpriteSheet(loadOrGenerate(Constants.ASSET_TILES, () -> gen.generateTileSet()),
                         Constants.SPRITE_SIZE, Constants.SPRITE_SIZE));
 
+        // Fishing Rod Action
+        spriteSheets.put(Constants.KEY_FISHING_ROD_ACTION,
+                new SpriteSheet(loadOrGenerate(Constants.ASSET_FISHING_ROD_ACTION, () -> gen.generateFishingRodActionSheet()),
+                        Constants.SPRITE_SIZE, Constants.SPRITE_SIZE));
+
         // Items
         images.put(Constants.KEY_FISHING_ROD,
                 loadOrGenerate(Constants.ASSET_FISHING_ROD, () -> gen.generateItemSprite("fishing_rod")));
@@ -97,6 +103,14 @@ public class AssetManager {
                 loadOrGenerate(Constants.ASSET_REWARD_TULIP, () -> gen.generateItemSprite("tulip")));
         images.put(Constants.KEY_REWARD_BONSAI,
                 loadOrGenerate(Constants.ASSET_REWARD_BONSAI, () -> gen.generateItemSprite("bonsai")));
+        images.put(Constants.KEY_FISH_CARP,
+                loadOrGenerate(Constants.ASSET_FISH_CARP, () -> gen.generateItemSprite("fish_carp")));
+        images.put(Constants.KEY_FISH_PERCH,
+                loadOrGenerate(Constants.ASSET_FISH_PERCH, () -> gen.generateItemSprite("fish_perch")));
+        images.put(Constants.KEY_FISH_CATFISH,
+                loadOrGenerate(Constants.ASSET_FISH_CATFISH, () -> gen.generateItemSprite("fish_catfish")));
+        images.put(Constants.KEY_FISH_GOLDFISH,
+                loadOrGenerate(Constants.ASSET_FISH_GOLDFISH, () -> gen.generateItemSprite("fish_goldfish")));
 
         // Interaction indicator
         images.put(Constants.KEY_INTERACT_ICON,

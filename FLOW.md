@@ -855,14 +855,74 @@ Game hỗ trợ thay đổi toàn bộ visual (nhân vật, map, item, reward ic
 
 ---
 
+## 20. Fishing Mini-game
+
+### Điều kiện kích hoạt
+```
+Player đã hoàn thành quest `fishing_rod`
+    │
+    ├─ Đứng gần tile WATER (full bounds + 16px chạm nước)
+    │  └─ Hiển thị biểu tượng 'F' nổi trên đầu Player
+    │
+    └─ Nhấn F
+       └─ PlayerState: NORMAL → FISHING
+          └─ Khóa movement / dialog / pickup / inventory / map cho tới khi kết thúc
+```
+
+### Waiting Phase
+```
+FishingMiniGame.start()
+    ├─ phase = WAITING
+    ├─ waitDuration = Random.Range(2.0, 5.0)
+    ├─ Hiển thị hình ảnh Player đang cầm cần câu hướng ra nước (sử dụng sprite sheet fishing_rod_action.png tương ứng 4 hướng)
+    └─ Player đứng yên chờ cá cắn
+
+Hết waitDuration
+    └─ phase = POWER_BAR
+       └─ Hiển thị "!" trên đầu Player
+```
+
+### Mini-game Phase: Power Bar
+```
+currentValue = 20
+maxValue = 100
+duration = 7 giây
+
+Mỗi frame:
+    ├─ currentValue -= 15 * deltaTime
+    ├─ Clamp currentValue không thấp hơn 0
+    └─ Vẽ hiệu ứng bọt khí nổi lên cách Player 40px theo hướng nhìn của Player
+
+Mỗi lần Space justPressed:
+    └─ currentValue += 8, clamp không quá 100
+```
+
+### Kết quả
+```
+Thắng:
+    ├─ Nếu currentValue >= 100 trong vòng 7 giây
+    ├─ InventorySystem.addRandomFishReward()
+    ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
+    └─ PlayerState: FISHING → NORMAL
+
+Thua:
+    ├─ Nếu hết 7 giây mà currentValue < 100
+    ├─ Không thêm item vào inventory
+    └─ PlayerState: FISHING → NORMAL
+```
+
+Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo inventory mới.
+
+---
+
 ## Tóm Tắt
 - **Engine**: Java 17 + JavaFX 21 Canvas 2D
 - **FPS**: 60 frames per second (60 Hz)
 - **World**: Procedural tile-based map (40x30 tiles)
-- **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion (cat follows only after fishing quest; garden reward goes to inventory)
-- **Input**: WASD movement, E interaction, I inventory, M map, Arrow keys for menus
-- **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → inventory overlay)
-- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay/Cat following
+- **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion → Fishing mini-game (cat follows only after fishing quest; garden/fish rewards go to inventory)
+- **Input**: WASD movement, E interaction, F fishing, I inventory, M map, Arrow keys for menus
+- **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay)
+- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay/Cat following/Fishing
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ theo roadmap trong PLAN.md.

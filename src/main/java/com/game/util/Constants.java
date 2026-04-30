@@ -50,9 +50,15 @@ public class Constants {
     public static final String ASSET_NPC_GRANDMA = "npc_grandma.png";
     public static final String ASSET_NPC_DRINK_SELLER = "npc_drink_seller.png";
     public static final String ASSET_NPC_FISHER_KID = "npc_fisher_kid.png";
+    public static final String ASSET_NPC_GARDENER = "npc_gardener.png";
     public static final String ASSET_CAT = "cat.png";
     public static final String ASSET_TILES = "tiles.png";
     public static final String ASSET_FISHING_ROD = "fishing_rod.png";
+    public static final String ASSET_SEEDS = "seeds.png";
+    public static final String ASSET_REWARD_ROSE = "rose.png";
+    public static final String ASSET_REWARD_SUNFLOWER = "sunflower.png";
+    public static final String ASSET_REWARD_TULIP = "tulip.png";
+    public static final String ASSET_REWARD_BONSAI = "bonsai.png";
     public static final String ASSET_INTERACT_ICON = "interact_icon.png";
 
     // ==================== ASSET KEYS (cho AssetManager) ====================
@@ -60,9 +66,15 @@ public class Constants {
     public static final String KEY_NPC_GRANDMA = "npc_grandma";
     public static final String KEY_NPC_DRINK_SELLER = "npc_drink_seller";
     public static final String KEY_NPC_FISHER_KID = "npc_fisher_kid";
+    public static final String KEY_NPC_GARDENER = "npc_gardener";
     public static final String KEY_CAT = "cat";
     public static final String KEY_TILES = "tiles";
     public static final String KEY_FISHING_ROD = "fishing_rod";
+    public static final String KEY_SEEDS = "seeds";
+    public static final String KEY_REWARD_ROSE = "rose";
+    public static final String KEY_REWARD_SUNFLOWER = "sunflower";
+    public static final String KEY_REWARD_TULIP = "tulip";
+    public static final String KEY_REWARD_BONSAI = "bonsai";
     public static final String KEY_INTERACT_ICON = "interact_icon";
 
     // ==================== ANIMATION FRAMES ====================

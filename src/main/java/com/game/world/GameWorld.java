@@ -6,10 +6,12 @@ import com.game.dialog.DialogData;
 import com.game.dialog.DialogSystem;
 import com.game.dialog.QuestSystem;
 import com.game.entity.*;
+import com.game.inventory.InventorySystem;
 import com.game.util.AssetManager;
 import com.game.util.Constants;
 
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -33,7 +35,9 @@ public class GameWorld {
 
     private DialogSystem dialogSystem;
     private QuestSystem questSystem;
+    private InventorySystem inventorySystem;
     private MapOverlay mapOverlay;
+    private boolean inventoryOpen = false;
 
     // Pickup notification
     private String pickupNotification = null;
@@ -45,6 +49,7 @@ public class GameWorld {
 
         // Initialize systems
         questSystem = new QuestSystem();
+        inventorySystem = new InventorySystem();
         dialogSystem = new DialogSystem(questSystem);
 
         // Create map
@@ -72,19 +77,24 @@ public class GameWorld {
         mapOverlay = new MapOverlay(tileMap);
 
         // Setup quest callbacks
-        dialogSystem.setOnQuestStart(() -> {
-            // Show fishing rod item on map
+        dialogSystem.setOnQuestStart((questId) -> {
+            // Show quest item on map
             for (Item item : items) {
-                if ("fishing_rod".equals(item.getItemId())) {
+                if (questId.equals(item.getItemId())) {
                     item.setVisible(true);
                 }
             }
         });
 
-        dialogSystem.setOnQuestComplete(() -> {
-            // Cat starts following player
-            cat.startFollowing(player);
-            showPickupNotification("🐱 Mèo con bắt đầu đi theo bạn!");
+        dialogSystem.setOnQuestComplete((questId) -> {
+            if (QuestSystem.FISHING_ROD_QUEST_ID.equals(questId)) {
+                // Cat starts following player after the main fishing quest.
+                cat.startFollowing(player);
+                showPickupNotification("🐱 Mèo con bắt đầu đi theo bạn!");
+            } else if (QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
+                InventorySystem.InventoryItem reward = inventorySystem.addRandomGardenReward();
+                showPickupNotification("🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "!");
+            }
         });
     }
 
@@ -138,6 +148,27 @@ public class GameWorld {
             )
         ));
         npcs.add(fisherKid);
+
+        // === Bác làm vườn — Góc dưới bên trái ===
+        NPC gardener = new NPC("Bác làm vườn", 5 * TileMap.TILE_SIZE, 25 * TileMap.TILE_SIZE,
+                NPC.DialogType.QUEST, Constants.KEY_NPC_GARDENER);
+        gardener.setDialogData(DialogData.quest(
+            QuestSystem.SEEDS_QUEST_ID,
+            List.of(
+                "Chào cháu, bác đang chăm vườn hoa ở góc này.",
+                "Sáng nay bác làm rơi túi hạt giống khi đi qua khu hoa phía trên công viên.",
+                "Cháu giúp bác tìm lại túi hạt giống được không?"
+            ),
+            List.of(
+                "Cháu tìm thấy túi hạt giống của bác chưa?",
+                "Bác nhớ nó rơi gần những luống hoa phía trên bên phải công viên."
+            ),
+            List.of(
+                "Đúng là túi hạt giống của bác rồi!",
+                "Cảm ơn cháu nhé, vườn hoa sắp có thêm nhiều mầm mới."
+            )
+        ));
+        npcs.add(gardener);
     }
 
     /**
@@ -148,6 +179,11 @@ public class GameWorld {
         Item fishingRod = new Item("fishing_rod", 35 * TileMap.TILE_SIZE, 25 * TileMap.TILE_SIZE);
         fishingRod.setVisible(false); // Hidden until quest active
         items.add(fishingRod);
+
+        // Túi hạt giống ẩn ở khu hoa phía trên-phải map
+        Item seeds = new Item(QuestSystem.SEEDS_QUEST_ID, 32 * TileMap.TILE_SIZE, 5 * TileMap.TILE_SIZE);
+        seeds.setVisible(false); // Hidden until quest active
+        items.add(seeds);
     }
 
     /**
@@ -157,15 +193,31 @@ public class GameWorld {
         // Update dialog system
         dialogSystem.update(dt);
 
-        // Handle map overlay toggle
-        if (input.isKeyJustPressed(KeyCode.M)) {
-            mapOverlay.toggle();
+        if (inventoryOpen) {
+            if (input.isKeyJustPressed(KeyCode.I) || input.isKeyJustPressed(KeyCode.ESCAPE)) {
+                inventoryOpen = false;
+            }
+            updatePickupNotification(dt);
+            return;
         }
 
         if (dialogSystem.isActive()) {
             // Dialog active → only handle dialog input
             dialogSystem.handleInput(input);
+            updatePickupNotification(dt);
             return;
+        }
+
+        // Toggle runtime inventory overlay
+        if (input.isKeyJustPressed(KeyCode.I)) {
+            inventoryOpen = true;
+            updatePickupNotification(dt);
+            return;
+        }
+
+        // Handle map overlay toggle
+        if (input.isKeyJustPressed(KeyCode.M)) {
+            mapOverlay.toggle();
         }
 
         // Player movement
@@ -193,10 +245,12 @@ public class GameWorld {
             item.update(dt);
             if (item.checkPickup(player)) {
                 item.setCollected(true);
-                if ("fishing_rod".equals(item.getItemId())) {
-                    questSystem.pickUpRod();
+                questSystem.addItem(item.getItemId());
+                if (QuestSystem.FISHING_ROD_QUEST_ID.equals(item.getItemId())) {
                     player.setHasFishingRod(true);
                     showPickupNotification("🎣 Đã nhặt được cần câu!");
+                } else if (QuestSystem.SEEDS_QUEST_ID.equals(item.getItemId())) {
+                    showPickupNotification("🌱 Đã nhặt được túi hạt giống!");
                 }
             }
         }
@@ -207,13 +261,7 @@ public class GameWorld {
         // Update camera
         camera.update(player.getCenterX(), player.getCenterY(), dt);
 
-        // Update pickup notification
-        if (pickupNotification != null) {
-            pickupTimer -= dt;
-            if (pickupTimer <= 0) {
-                pickupNotification = null;
-            }
-        }
+        updatePickupNotification(dt);
     }
 
     /**
@@ -266,6 +314,11 @@ public class GameWorld {
 
         // Controls hint (top-left)
         renderControlsHint(gc);
+
+        // Inventory overlay should be topmost and pauses gameplay while open.
+        if (inventoryOpen) {
+            renderInventoryOverlay(gc);
+        }
     }
 
     /**
@@ -274,6 +327,15 @@ public class GameWorld {
     private void showPickupNotification(String text) {
         pickupNotification = text;
         pickupTimer = 3.0; // 3 seconds
+    }
+
+    private void updatePickupNotification(double dt) {
+        if (pickupNotification != null) {
+            pickupTimer -= dt;
+            if (pickupTimer <= 0) {
+                pickupNotification = null;
+            }
+        }
     }
 
     private void renderPickupNotification(GraphicsContext gc) {
@@ -303,7 +365,76 @@ public class GameWorld {
     private void renderControlsHint(GraphicsContext gc) {
         gc.setFill(Color.web("#FFFFFF", 0.4));
         gc.setFont(Font.font("Monospaced", 10));
-        gc.fillText("WASD: Di chuyển | E: Nói chuyện | M: Bản đồ | Space: Tiếp tục", 10, Constants.WINDOW_HEIGHT - 10);
+        gc.fillText("WASD: Di chuyển | E: Nói chuyện | M: Bản đồ | I: Kho | Space: Tiếp tục", 10, Constants.WINDOW_HEIGHT - 10);
+    }
+
+    private void renderInventoryOverlay(GraphicsContext gc) {
+        double w = Constants.WINDOW_WIDTH;
+        double h = Constants.WINDOW_HEIGHT;
+        double panelW = 520;
+        double panelH = 380;
+        double panelX = (w - panelW) / 2.0;
+        double panelY = (h - panelH) / 2.0;
+
+        gc.setFill(Color.web("#000000", 0.45));
+        gc.fillRect(0, 0, w, h);
+
+        gc.setFill(Color.web("#FFF8DC", 0.97));
+        gc.fillRoundRect(panelX, panelY, panelW, panelH, 18, 18);
+        gc.setStroke(Color.web("#A8E6CF"));
+        gc.setLineWidth(4);
+        gc.strokeRoundRect(panelX, panelY, panelW, panelH, 18, 18);
+
+        gc.setFill(Color.web("#5D4037"));
+        gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 24));
+        gc.fillText("Kho lưu trữ", panelX + 28, panelY + 44);
+
+        gc.setFill(Color.web("#7A5A44"));
+        gc.setFont(Font.font("Monospaced", 11));
+        gc.fillText("I / Esc: Đóng", panelX + panelW - 115, panelY + 42);
+
+        if (inventorySystem.isEmpty()) {
+            gc.setFill(Color.web("#7A5A44", 0.75));
+            gc.setFont(Font.font("Monospaced", 16));
+            gc.fillText("Chưa có vật phẩm nào", panelX + 155, panelY + 190);
+            return;
+        }
+
+        List<InventorySystem.InventoryItem> inventoryItems = inventorySystem.getItems();
+        int cols = 2;
+        double cellW = 220;
+        double cellH = 74;
+        double gap = 18;
+        double startX = panelX + 30;
+        double startY = panelY + 72;
+
+        for (int i = 0; i < inventoryItems.size(); i++) {
+            InventorySystem.InventoryItem item = inventoryItems.get(i);
+            int col = i % cols;
+            int row = i / cols;
+            double cellX = startX + col * (cellW + gap);
+            double cellY = startY + row * (cellH + gap);
+
+            gc.setFill(Color.web("#FFFFFF", 0.72));
+            gc.fillRoundRect(cellX, cellY, cellW, cellH, 10, 10);
+            gc.setStroke(Color.web("#D6C49C", 0.9));
+            gc.setLineWidth(2);
+            gc.strokeRoundRect(cellX, cellY, cellW, cellH, 10, 10);
+
+            Image icon = item.getIcon();
+            if (icon != null) {
+                gc.setImageSmoothing(false);
+                gc.drawImage(icon, cellX + 14, cellY + 15, 44, 44);
+            }
+
+            gc.setFill(Color.web("#4A4A4A"));
+            gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 14));
+            gc.fillText(item.getDisplayName(), cellX + 70, cellY + 31);
+
+            gc.setFill(Color.web("#2E7D32"));
+            gc.setFont(Font.font("Monospaced", 13));
+            gc.fillText("Số lượng: x" + item.getQuantity(), cellX + 70, cellY + 54);
+        }
     }
 
     // Getters for MapOverlay

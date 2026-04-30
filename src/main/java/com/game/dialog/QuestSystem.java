@@ -1,10 +1,19 @@
 package com.game.dialog;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * QuestSystem — Quản lý trạng thái quest.
- * Chỉ có 1 quest: "Tìm cần câu cho bạn nhỏ".
+ * Hỗ trợ nhiều quest nhỏ bằng questId.
  */
 public class QuestSystem {
+
+    public static final String FISHING_ROD_QUEST_ID = "fishing_rod";
+    public static final String SEEDS_QUEST_ID = "seeds";
 
     public enum QuestState {
         NOT_STARTED,
@@ -12,57 +21,122 @@ public class QuestSystem {
         COMPLETED
     }
 
-    private QuestState fishingRodQuest = QuestState.NOT_STARTED;
-    private boolean hasPickedUpRod = false;
+    private final Map<String, QuestState> questStates = new LinkedHashMap<>();
+    private final Set<String> collectedItems = new HashSet<>();
+
+    public QuestSystem() {
+        registerQuest(FISHING_ROD_QUEST_ID);
+        registerQuest(SEEDS_QUEST_ID);
+    }
+
+    private void registerQuest(String questId) {
+        questStates.putIfAbsent(questId, QuestState.NOT_STARTED);
+    }
+
+    /**
+     * Bắt đầu quest theo id.
+     */
+    public void startQuest(String questId) {
+        if (getQuestState(questId) == QuestState.NOT_STARTED) {
+            questStates.put(questId, QuestState.ACTIVE);
+        }
+    }
+
+    /**
+     * Hoàn thành quest theo id.
+     */
+    public void completeQuest(String questId) {
+        questStates.put(questId, QuestState.COMPLETED);
+    }
+
+    /**
+     * Đánh dấu đã nhặt item theo id.
+     */
+    public void addItem(String itemId) {
+        collectedItems.add(itemId);
+    }
+
+    /**
+     * Kiểm tra đã nhặt item theo id chưa.
+     */
+    public boolean hasItem(String itemId) {
+        return collectedItems.contains(itemId);
+    }
+
+    /**
+     * Lấy trạng thái quest theo id.
+     */
+    public QuestState getQuestState(String questId) {
+        return questStates.getOrDefault(questId, QuestState.NOT_STARTED);
+    }
+
+    /**
+     * Lấy toàn bộ quest state theo thứ tự đăng ký.
+     */
+    public Map<String, QuestState> getQuestStates() {
+        return Collections.unmodifiableMap(questStates);
+    }
+
+    /**
+     * Kiểm tra quest theo id đã active chưa.
+     */
+    public boolean isQuestActive(String questId) {
+        return getQuestState(questId) == QuestState.ACTIVE;
+    }
+
+    /**
+     * Kiểm tra quest theo id đã hoàn thành chưa.
+     */
+    public boolean isQuestCompleted(String questId) {
+        return getQuestState(questId) == QuestState.COMPLETED;
+    }
 
     /**
      * Bắt đầu quest tìm cần câu.
      */
     public void startFishingQuest() {
-        if (fishingRodQuest == QuestState.NOT_STARTED) {
-            fishingRodQuest = QuestState.ACTIVE;
-        }
+        startQuest(FISHING_ROD_QUEST_ID);
     }
 
     /**
      * Hoàn thành quest.
      */
     public void completeFishingQuest() {
-        fishingRodQuest = QuestState.COMPLETED;
+        completeQuest(FISHING_ROD_QUEST_ID);
     }
 
     /**
      * Đánh dấu đã nhặt cần câu.
      */
     public void pickUpRod() {
-        hasPickedUpRod = true;
+        addItem(FISHING_ROD_QUEST_ID);
     }
 
     /**
      * Kiểm tra đã nhặt cần câu chưa.
      */
     public boolean hasRod() {
-        return hasPickedUpRod;
+        return hasItem(FISHING_ROD_QUEST_ID);
     }
 
     /**
      * Lấy trạng thái quest hiện tại.
      */
     public QuestState getFishingQuestState() {
-        return fishingRodQuest;
+        return getQuestState(FISHING_ROD_QUEST_ID);
     }
 
     /**
      * Kiểm tra quest đã active chưa.
      */
     public boolean isQuestActive() {
-        return fishingRodQuest == QuestState.ACTIVE;
+        return isQuestActive(FISHING_ROD_QUEST_ID);
     }
 
     /**
      * Kiểm tra quest đã hoàn thành chưa.
      */
     public boolean isQuestCompleted() {
-        return fishingRodQuest == QuestState.COMPLETED;
+        return isQuestCompleted(FISHING_ROD_QUEST_ID);
     }
 }

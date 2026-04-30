@@ -38,6 +38,7 @@ public class DialogData {
     private List<Choice> choices;
 
     // QUEST dialog
+    private String questId;
     private Map<QuestSystem.QuestState, List<String>> questDialogs;
 
     private DialogData(Type type) {
@@ -72,7 +73,19 @@ public class DialogData {
             List<String> notStarted,
             List<String> active,
             List<String> completed) {
+        return quest(QuestSystem.FISHING_ROD_QUEST_ID, notStarted, active, completed);
+    }
+
+    /**
+     * Tạo dialog quest theo questId — nội dung thay đổi theo quest state.
+     */
+    public static DialogData quest(
+            String questId,
+            List<String> notStarted,
+            List<String> active,
+            List<String> completed) {
         DialogData data = new DialogData(Type.QUEST);
+        data.questId = questId;
         data.questDialogs = new HashMap<>();
         data.questDialogs.put(QuestSystem.QuestState.NOT_STARTED, notStarted);
         data.questDialogs.put(QuestSystem.QuestState.ACTIVE, active);
@@ -86,6 +99,7 @@ public class DialogData {
     public List<String> getLines() { return lines; }
     public String getQuestion() { return question; }
     public List<Choice> getChoices() { return choices; }
+    public String getQuestId() { return questId; }
 
     public List<String> getQuestLines(QuestSystem.QuestState state) {
         if (questDialogs == null) return List.of();

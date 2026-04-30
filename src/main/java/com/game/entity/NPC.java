@@ -2,6 +2,7 @@ package com.game.entity;
 
 import com.game.dialog.DialogData;
 import com.game.util.AssetManager;
+import com.game.util.Constants;
 import com.game.util.SpriteSheet;
 
 import javafx.geometry.Rectangle2D;
@@ -34,7 +35,7 @@ public class NPC extends Entity {
     private int idleFrame = 0;
 
     public NPC(String name, double x, double y, DialogType dialogType, String spriteKey) {
-        super(x, y, 32, 32);
+        super(x, y, Constants.SPRITE_SIZE, Constants.SPRITE_SIZE);
         this.name = name;
         this.dialogType = dialogType;
         this.spriteSheet = AssetManager.getInstance().getSpriteSheet(spriteKey);
@@ -95,27 +96,38 @@ public class NPC extends Entity {
         gc.setFont(Font.font("Monospaced", 10));
         gc.setFill(Color.web("#000000", 0.5));
         double nameWidth = name.length() * 6;
-        gc.fillRoundRect(renderX + width/2.0 - nameWidth/2 - 4, renderY - 16, nameWidth + 8, 14, 4, 4);
+        gc.fillRoundRect(renderX + width / 2.0 - nameWidth / 2 - 4, renderY - 16, nameWidth + 8, 14, 4, 4);
         gc.setFill(Color.WHITE);
-        gc.fillText(name, renderX + width/2.0 - nameWidth/2, renderY - 5);
+        gc.fillText(name, renderX + width / 2.0 - nameWidth / 2, renderY - 5);
 
         // Draw interaction indicator when player is in range
         if (playerInRange) {
             double bounceOffset = Math.sin(indicatorBounce) * 4;
             gc.setFill(Color.web("#FFD700"));
             gc.setFont(Font.font("Monospaced", 16));
-            gc.fillText("!", renderX + width/2.0 - 4, renderY - 22 + bounceOffset);
+            gc.fillText("!", renderX + width / 2.0 - 4, renderY - 22 + bounceOffset);
 
             // "Nhấn E" hint
             gc.setFont(Font.font("Monospaced", 8));
             gc.setFill(Color.web("#FFFFFF", 0.7));
-            gc.fillText("[E]", renderX + width/2.0 - 8, renderY - 30 + bounceOffset);
+            gc.fillText("[E]", renderX + width / 2.0 - 8, renderY - 30 + bounceOffset);
         }
     }
 
     // Getters/Setters
-    public String getName() { return name; }
-    public DialogType getDialogType() { return dialogType; }
-    public DialogData getDialogData() { return dialogData; }
-    public void setDialogData(DialogData data) { this.dialogData = data; }
+    public String getName() {
+        return name;
+    }
+
+    public DialogType getDialogType() {
+        return dialogType;
+    }
+
+    public DialogData getDialogData() {
+        return dialogData;
+    }
+
+    public void setDialogData(DialogData data) {
+        this.dialogData = data;
+    }
 }

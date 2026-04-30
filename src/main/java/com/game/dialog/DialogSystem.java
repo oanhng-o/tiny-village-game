@@ -10,6 +10,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * DialogSystem — State machine quản lý hiển thị dialog.
@@ -49,8 +51,8 @@ public class DialogSystem {
 
     // Quest callback
     private QuestSystem questSystem;
-    private Runnable onQuestStart;
-    private Runnable onQuestComplete;
+    private Consumer<String> onQuestStart;
+    private Consumer<String> onQuestComplete;
 
     public DialogSystem(QuestSystem questSystem) {
         this.questSystem = questSystem;
@@ -80,7 +82,11 @@ public class DialogSystem {
                 currentLines = List.of(currentDialog.getQuestion());
             }
             case QUEST -> {
-                QuestSystem.QuestState questState = questSystem.getFishingQuestState();
+                String questId = currentDialog.getQuestId();
+                QuestSystem.QuestState questState = questSystem.getQuestState(questId);
+                if (questState == QuestSystem.QuestState.ACTIVE && questSystem.hasItem(questId)) {
+                    questState = QuestSystem.QuestState.COMPLETED;
+                }
                 currentLines = currentDialog.getQuestLines(questState);
             }
         }
@@ -163,13 +169,14 @@ public class DialogSystem {
      * Xử lý kết thúc quest dialog.
      */
     private void handleQuestEnd() {
-        QuestSystem.QuestState qs = questSystem.getFishingQuestState();
+        String questId = currentDialog.getQuestId();
+        QuestSystem.QuestState qs = questSystem.getQuestState(questId);
         if (qs == QuestSystem.QuestState.NOT_STARTED) {
-            questSystem.startFishingQuest();
-            if (onQuestStart != null) onQuestStart.run();
-        } else if (qs == QuestSystem.QuestState.ACTIVE && questSystem.hasRod()) {
-            questSystem.completeFishingQuest();
-            if (onQuestComplete != null) onQuestComplete.run();
+            questSystem.startQuest(questId);
+            if (onQuestStart != null) onQuestStart.accept(questId);
+        } else if (qs == QuestSystem.QuestState.ACTIVE && questSystem.hasItem(questId)) {
+            questSystem.completeQuest(questId);
+            if (onQuestComplete != null) onQuestComplete.accept(questId);
         }
     }
 
@@ -328,39 +335,52 @@ public class DialogSystem {
      * Render quest indicator ở góc màn hình.
      */
     public void renderQuestIndicator(GraphicsContext gc) {
-        QuestSystem.QuestState qs = questSystem.getFishingQuestState();
-        if (qs == QuestSystem.QuestState.NOT_STARTED) return;
-
-        String questText;
-        Color questColor;
-
-        if (qs == QuestSystem.QuestState.ACTIVE) {
-            String status = questSystem.hasRod() ? "✓ Đã tìm thấy!" : "Đang tìm...";
-            questText = "🎣 Tìm cần câu: " + status;
-            questColor = Color.web("#5D4037"); // Dark brown
-        } else {
-            questText = "🎣 Tìm cần câu: ✓ Hoàn thành!";
-            questColor = Color.web("#2E7D32"); // Dark green
-        }
-
-        // Background
         gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 13));
-        double qw = questText.length() * 8.5 + 20;
-        double qx = Constants.WINDOW_WIDTH - qw - 15;
-        double qy = 15;
-        
-        gc.setFill(Color.web("#FFF8DC", 0.9));
-        gc.fillRoundRect(qx, qy, qw, 35, 15, 15);
-        gc.setStroke(Color.web("#A8E6CF")); // Pastel green
-        gc.setLineWidth(3);
-        gc.strokeRoundRect(qx, qy, qw, 35, 15, 15);
 
-        // Text
-        gc.setFill(questColor);
-        gc.fillText(questText, qx + 10, qy + 22);
+        int visibleQuestIndex = 0;
+        for (Map.Entry<String, QuestSystem.QuestState> entry : questSystem.getQuestStates().entrySet()) {
+            String questId = entry.getKey();
+            QuestSystem.QuestState qs = entry.getValue();
+            if (qs == QuestSystem.QuestState.NOT_STARTED) {
+                continue;
+            }
+
+            String status;
+            Color questColor;
+            if (qs == QuestSystem.QuestState.ACTIVE) {
+                status = questSystem.hasItem(questId) ? "✓ Đã tìm thấy!" : "Đang tìm...";
+                questColor = Color.web("#5D4037"); // Dark brown
+            } else {
+                status = "✓ Hoàn thành!";
+                questColor = Color.web("#2E7D32"); // Dark green
+            }
+
+            String questText = getQuestLabel(questId) + ": " + status;
+            double qw = questText.length() * 8.5 + 20;
+            double qx = Constants.WINDOW_WIDTH - qw - 15;
+            double qy = 15 + visibleQuestIndex * 42;
+
+            gc.setFill(Color.web("#FFF8DC", 0.9));
+            gc.fillRoundRect(qx, qy, qw, 35, 15, 15);
+            gc.setStroke(Color.web("#A8E6CF")); // Pastel green
+            gc.setLineWidth(3);
+            gc.strokeRoundRect(qx, qy, qw, 35, 15, 15);
+
+            gc.setFill(questColor);
+            gc.fillText(questText, qx + 10, qy + 22);
+            visibleQuestIndex++;
+        }
+    }
+
+    private String getQuestLabel(String questId) {
+        return switch (questId) {
+            case QuestSystem.FISHING_ROD_QUEST_ID -> "🎣 Tìm cần câu";
+            case QuestSystem.SEEDS_QUEST_ID -> "🌱 Tìm hạt giống";
+            default -> "Nhiệm vụ " + questId;
+        };
     }
 
     public boolean isActive() { return state != State.INACTIVE; }
-    public void setOnQuestStart(Runnable r) { this.onQuestStart = r; }
-    public void setOnQuestComplete(Runnable r) { this.onQuestComplete = r; }
+    public void setOnQuestStart(Consumer<String> r) { this.onQuestStart = r; }
+    public void setOnQuestComplete(Consumer<String> r) { this.onQuestComplete = r; }
 }

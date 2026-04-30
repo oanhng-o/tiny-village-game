@@ -105,12 +105,14 @@ public class PixelArtGenerator {
             case "grandma" -> drawGrandma(pw, 0, 0, size);
             case "drink_seller" -> drawDrinkSeller(pw, 0, 0, size);
             case "fisher_kid" -> drawFisherKid(pw, 0, 0, size);
+            case "gardener" -> drawGardener(pw, 0, 0, size);
         }
         // Frame 2: slight variation (blink/idle)
         switch (type) {
             case "grandma" -> drawGrandmaIdle(pw, size, 0, size);
             case "drink_seller" -> drawDrinkSellerIdle(pw, size, 0, size);
             case "fisher_kid" -> drawFisherKidIdle(pw, size, 0, size);
+            case "gardener" -> drawGardenerIdle(pw, size, 0, size);
         }
         return sheet;
     }
@@ -202,6 +204,51 @@ public class PixelArtGenerator {
 
     private void drawFisherKidIdle(PixelWriter pw, int ox, int oy, int s) {
         drawFisherKid(pw, ox, oy, s);
+    }
+
+    private void drawGardener(PixelWriter pw, int ox, int oy, int s) {
+        Color hat = Color.web("#D2B48C");
+        Color hatDark = Color.web("#A9824F");
+        Color hair = Color.web("#5A3A22");
+        Color skin = Color.web("#DEB887");
+        Color shirt = Color.web("#3CB371");
+        Color overalls = Color.web("#4169A1");
+        Color eyes = Color.web("#2c1810");
+        Color boots = Color.web("#6B4226");
+
+        // Straw hat
+        fillRect(pw, ox+7, oy+3, 18, 3, hat);
+        fillRect(pw, ox+10, oy+1, 12, 4, hat);
+        fillRect(pw, ox+8, oy+5, 16, 1, hatDark);
+
+        // Head
+        fillRect(pw, ox+10, oy+7, 12, 4, hair);
+        fillRect(pw, ox+11, oy+10, 10, 8, skin);
+        fillRect(pw, ox+13, oy+12, 2, 3, eyes);
+        fillRect(pw, ox+17, oy+12, 2, 3, eyes);
+        fillRect(pw, ox+14, oy+16, 4, 1, Color.web("#8B4513"));
+
+        // Body
+        fillRect(pw, ox+9, oy+18, 14, 6, shirt);
+        fillRect(pw, ox+12, oy+18, 8, 9, overalls);
+        fillRect(pw, ox+9, oy+19, 3, 5, skin);
+        fillRect(pw, ox+22, oy+19, 3, 5, skin);
+
+        // Small trowel
+        fillRect(pw, ox+24, oy+18, 1, 8, Color.web("#8B6914"));
+        fillRect(pw, ox+23, oy+25, 3, 3, Color.web("#C0C0C0"));
+
+        // Legs and boots
+        fillRect(pw, ox+11, oy+26, 4, 3, overalls);
+        fillRect(pw, ox+17, oy+26, 4, 3, overalls);
+        fillRect(pw, ox+10, oy+29, 5, 2, boots);
+        fillRect(pw, ox+17, oy+29, 5, 2, boots);
+    }
+
+    private void drawGardenerIdle(PixelWriter pw, int ox, int oy, int s) {
+        drawGardener(pw, ox, oy, s);
+        fillRect(pw, ox+13, oy+12, 2, 1, Color.web("#2c1810"));
+        fillRect(pw, ox+17, oy+12, 2, 1, Color.web("#2c1810"));
     }
 
     // ======================== CAT ========================
@@ -468,8 +515,98 @@ public class PixelArtGenerator {
             fillRect(pw, 20, 4, 2, 2, sparkle);
             fillRect(pw, 24, 8, 2, 2, sparkle);
             fillRect(pw, 18, 10, 1, 1, sparkle);
+        } else if ("seeds".equals(type)) {
+            Color bag = Color.web("#D2B48C");
+            Color bagDark = Color.web("#A9824F");
+            Color seed = Color.web("#6B4226");
+            Color leaf = Color.web("#3CB371");
+            Color sparkle = Color.web("#FFD700");
+
+            // Seed pouch
+            fillRect(pw, 9, 10, 14, 16, bag);
+            fillRect(pw, 8, 14, 16, 11, bag);
+            fillRect(pw, 10, 10, 12, 2, bagDark);
+            fillRect(pw, 11, 12, 10, 1, bagDark);
+            fillRect(pw, 9, 24, 14, 2, bagDark);
+
+            // Seeds spilling out
+            fillRect(pw, 13, 14, 2, 2, seed);
+            fillRect(pw, 18, 15, 2, 2, seed);
+            fillRect(pw, 15, 19, 2, 2, seed);
+            fillRect(pw, 21, 23, 2, 2, seed);
+
+            // Tiny sprout icon on the pouch
+            fillRect(pw, 15, 8, 2, 5, leaf);
+            fillRect(pw, 12, 9, 4, 2, leaf);
+            fillRect(pw, 17, 9, 4, 2, leaf);
+
+            // Sparkle
+            fillRect(pw, 5, 8, 2, 2, sparkle);
+            fillRect(pw, 25, 7, 2, 2, sparkle);
+        } else if ("rose".equals(type)) {
+            drawRewardFlower(pw, Color.web("#E84A5F"), Color.web("#B71C3A"), Color.web("#2E8B57"));
+        } else if ("sunflower".equals(type)) {
+            drawRewardFlower(pw, Color.web("#FFD34D"), Color.web("#8B5A2B"), Color.web("#3CB371"));
+        } else if ("tulip".equals(type)) {
+            drawRewardFlower(pw, Color.web("#DA70D6"), Color.web("#9B2FAE"), Color.web("#2E8B57"));
+        } else if ("bonsai".equals(type)) {
+            drawRewardBonsai(pw);
         }
         return img;
+    }
+
+    private void drawRewardFlower(PixelWriter pw, Color petal, Color center, Color leaf) {
+        Color pot = Color.web("#CD853F");
+        Color potDark = Color.web("#8B5A2B");
+        Color stem = Color.web("#228B22");
+        Color soil = Color.web("#4A2C17");
+
+        // Pot
+        fillRect(pw, 10, 22, 12, 6, pot);
+        fillRect(pw, 9, 20, 14, 3, pot);
+        fillRect(pw, 11, 27, 10, 2, potDark);
+        fillRect(pw, 11, 21, 10, 1, soil);
+
+        // Stem and leaves
+        fillRect(pw, 15, 11, 2, 10, stem);
+        fillRect(pw, 11, 15, 5, 2, leaf);
+        fillRect(pw, 17, 17, 5, 2, leaf);
+
+        // Flower head
+        fillRect(pw, 13, 7, 6, 2, petal);
+        fillRect(pw, 11, 9, 10, 4, petal);
+        fillRect(pw, 13, 13, 6, 2, petal);
+        fillRect(pw, 15, 10, 2, 2, center);
+
+        // Sparkle
+        fillRect(pw, 5, 7, 2, 2, Color.web("#FFD700"));
+        fillRect(pw, 25, 10, 2, 2, Color.web("#FFD700"));
+    }
+
+    private void drawRewardBonsai(PixelWriter pw) {
+        Color pot = Color.web("#A0522D");
+        Color potDark = Color.web("#6B3417");
+        Color trunk = Color.web("#8B5A2B");
+        Color leaves = Color.web("#2E8B57");
+        Color leafLight = Color.web("#3CB371");
+
+        // Pot
+        fillRect(pw, 9, 22, 14, 6, pot);
+        fillRect(pw, 8, 20, 16, 3, pot);
+        fillRect(pw, 10, 27, 12, 2, potDark);
+
+        // Trunk
+        fillRect(pw, 15, 12, 3, 10, trunk);
+        fillRect(pw, 13, 15, 5, 2, trunk);
+        fillRect(pw, 17, 13, 4, 2, trunk);
+
+        // Leaves
+        fillRect(pw, 8, 8, 11, 6, leaves);
+        fillRect(pw, 15, 6, 10, 6, leaves);
+        fillRect(pw, 18, 12, 8, 5, leaves);
+        fillRect(pw, 11, 8, 5, 2, leafLight);
+        fillRect(pw, 18, 6, 5, 2, leafLight);
+        fillRect(pw, 20, 13, 4, 2, leafLight);
     }
 
     // ======================== UI ========================

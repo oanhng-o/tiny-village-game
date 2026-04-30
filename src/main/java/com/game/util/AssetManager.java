@@ -70,6 +70,9 @@ public class AssetManager {
                 new SpriteSheet(
                         loadOrGenerate(Constants.ASSET_NPC_FISHER_KID, () -> gen.generateNPCSheet("fisher_kid")),
                         Constants.SPRITE_SIZE, Constants.SPRITE_SIZE));
+        spriteSheets.put(Constants.KEY_NPC_GARDENER,
+                new SpriteSheet(loadOrGenerate(Constants.ASSET_NPC_GARDENER, () -> gen.generateNPCSheet("gardener")),
+                        Constants.SPRITE_SIZE, Constants.SPRITE_SIZE));
 
         // Cat sprite sheet
         spriteSheets.put(Constants.KEY_CAT,
@@ -84,6 +87,16 @@ public class AssetManager {
         // Items
         images.put(Constants.KEY_FISHING_ROD,
                 loadOrGenerate(Constants.ASSET_FISHING_ROD, () -> gen.generateItemSprite("fishing_rod")));
+        images.put(Constants.KEY_SEEDS,
+                loadOrGenerate(Constants.ASSET_SEEDS, () -> gen.generateItemSprite("seeds")));
+        images.put(Constants.KEY_REWARD_ROSE,
+                loadOrGenerate(Constants.ASSET_REWARD_ROSE, () -> gen.generateItemSprite("rose")));
+        images.put(Constants.KEY_REWARD_SUNFLOWER,
+                loadOrGenerate(Constants.ASSET_REWARD_SUNFLOWER, () -> gen.generateItemSprite("sunflower")));
+        images.put(Constants.KEY_REWARD_TULIP,
+                loadOrGenerate(Constants.ASSET_REWARD_TULIP, () -> gen.generateItemSprite("tulip")));
+        images.put(Constants.KEY_REWARD_BONSAI,
+                loadOrGenerate(Constants.ASSET_REWARD_BONSAI, () -> gen.generateItemSprite("bonsai")));
 
         // Interaction indicator
         images.put(Constants.KEY_INTERACT_ICON,

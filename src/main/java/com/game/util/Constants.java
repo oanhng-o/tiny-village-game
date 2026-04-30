@@ -46,7 +46,8 @@ public class Constants {
     public static final String ASSET_DIR = "assets/";
 
     // Asset file names
-    public static final String ASSET_PLAYER = "player.png";
+    public static final String ASSET_PLAYER_GIRL = "player.png";
+    public static final String ASSET_PLAYER_BOY = "player2.png";
     public static final String ASSET_NPC_GRANDMA = "npc_grandma.png";
     public static final String ASSET_NPC_DRINK_SELLER = "npc_drink_seller.png";
     public static final String ASSET_NPC_FISHER_KID = "npc_fisher_kid.png";

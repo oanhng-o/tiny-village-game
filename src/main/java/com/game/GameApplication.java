@@ -2,6 +2,7 @@ package com.game;
 
 import com.game.core.GameLoop;
 import com.game.core.InputHandler;
+import com.game.util.AssetManager;
 import com.game.util.Constants;
 import com.game.world.GameWorld;
 
@@ -9,6 +10,7 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -205,93 +207,12 @@ public class GameApplication extends Application {
     }
 
     /**
-     * Vẽ preview nhân vật pixel art trên màn hình chọn.
+     * Vẽ preview nhân vật bằng frame đứng yên từ spritesheet trong assets.
      */
     private void drawCharacterPreview(GraphicsContext gc, double x, double y, boolean isGirl) {
-        int scale = 4; // Scale up for preview
-        int s = scale;
-
-        if (isGirl) {
-            // Hair (pink-brown)
-            gc.setFill(Color.web("#8B4513"));
-            gc.fillRect(x + 2*s, y, 8*s, 2*s);
-            gc.fillRect(x + 1*s, y + 2*s, 10*s, 2*s);
-            gc.fillRect(x + 1*s, y + 4*s, 2*s, 4*s);
-            gc.fillRect(x + 9*s, y + 4*s, 2*s, 4*s);
-
-            // Face
-            gc.setFill(Color.web("#FFDAB9"));
-            gc.fillRect(x + 3*s, y + 4*s, 6*s, 5*s);
-
-            // Eyes
-            gc.setFill(Color.web("#2c1810"));
-            gc.fillRect(x + 4*s, y + 5*s, 1*s, 2*s);
-            gc.fillRect(x + 7*s, y + 5*s, 1*s, 2*s);
-
-            // Blush
-            gc.setFill(Color.web("#FFB6C1", 0.6));
-            gc.fillRect(x + 3*s, y + 7*s, 1*s, 1*s);
-            gc.fillRect(x + 8*s, y + 7*s, 1*s, 1*s);
-
-            // Smile
-            gc.setFill(Color.web("#e07060"));
-            gc.fillRect(x + 5*s, y + 7*s, 2*s, 1*s);
-
-            // Ribbon
-            gc.setFill(Color.web("#FF69B4"));
-            gc.fillRect(x + 8*s, y + 1*s, 3*s, 2*s);
-
-            // Dress
-            gc.setFill(Color.web("#FF69B4"));
-            gc.fillRect(x + 3*s, y + 9*s, 6*s, 2*s);
-            gc.fillRect(x + 2*s, y + 11*s, 8*s, 3*s);
-
-            // Legs
-            gc.setFill(Color.web("#FFDAB9"));
-            gc.fillRect(x + 3*s, y + 14*s, 2*s, 2*s);
-            gc.fillRect(x + 7*s, y + 14*s, 2*s, 2*s);
-
-            // Shoes
-            gc.setFill(Color.web("#FF1493"));
-            gc.fillRect(x + 3*s, y + 16*s, 2*s, 1*s);
-            gc.fillRect(x + 7*s, y + 16*s, 2*s, 1*s);
-        } else {
-            // Hair (dark)
-            gc.setFill(Color.web("#2c3e50"));
-            gc.fillRect(x + 2*s, y, 8*s, 2*s);
-            gc.fillRect(x + 1*s, y + 2*s, 10*s, 2*s);
-
-            // Face
-            gc.setFill(Color.web("#FFDAB9"));
-            gc.fillRect(x + 3*s, y + 4*s, 6*s, 5*s);
-
-            // Eyes
-            gc.setFill(Color.web("#2c1810"));
-            gc.fillRect(x + 4*s, y + 5*s, 1*s, 2*s);
-            gc.fillRect(x + 7*s, y + 5*s, 1*s, 2*s);
-
-            // Smile
-            gc.setFill(Color.web("#e07060"));
-            gc.fillRect(x + 5*s, y + 7*s, 2*s, 1*s);
-
-            // T-shirt
-            gc.setFill(Color.web("#3498db"));
-            gc.fillRect(x + 3*s, y + 9*s, 6*s, 2*s);
-            gc.fillRect(x + 2*s, y + 9*s, 1*s, 3*s);
-            gc.fillRect(x + 9*s, y + 9*s, 1*s, 3*s);
-            gc.fillRect(x + 3*s, y + 11*s, 6*s, 2*s);
-
-            // Pants
-            gc.setFill(Color.web("#2c3e50"));
-            gc.fillRect(x + 3*s, y + 13*s, 6*s, 2*s);
-            gc.fillRect(x + 3*s, y + 14*s, 2*s, 2*s);
-            gc.fillRect(x + 7*s, y + 14*s, 2*s, 2*s);
-
-            // Shoes
-            gc.setFill(Color.web("#e74c3c"));
-            gc.fillRect(x + 3*s, y + 16*s, 2*s, 1*s);
-            gc.fillRect(x + 7*s, y + 16*s, 2*s, 1*s);
-        }
+        Image preview = AssetManager.getInstance().getPlayerPreview(isGirl);
+        gc.setImageSmoothing(false);
+        gc.drawImage(preview, x - 8, y, 96, 96);
     }
 
     /**

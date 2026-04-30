@@ -46,6 +46,32 @@ public class AssetManager {
     }
 
     /**
+     * Player has gender-specific sprite sheets because character selection has two
+     * visual variants. Girl uses player.png, boy uses player2.png.
+     */
+    private Image loadPlayer(boolean isGirl, PixelArtGenerator generator) {
+        String filename = isGirl ? Constants.ASSET_PLAYER_GIRL : Constants.ASSET_PLAYER_BOY;
+        return loadOrGenerate(filename, () -> generator.generatePlayerSheet(isGirl));
+    }
+
+    /**
+     * Loads the idle, front-facing player frame for the character select screen.
+     * This does not mark the full asset set as loaded, so the chosen in-game
+     * sprite sheet can still be loaded later with the selected gender.
+     */
+    public Image getPlayerPreview(boolean isGirl) {
+        String key = isGirl ? "player_preview_girl" : "player_preview_boy";
+        Image preview = images.get(key);
+        if (preview == null) {
+            PixelArtGenerator generator = new PixelArtGenerator();
+            preview = new SpriteSheet(loadPlayer(isGirl, generator),
+                    Constants.SPRITE_SIZE, Constants.SPRITE_SIZE).getFrame(0, 0);
+            images.put(key, preview);
+        }
+        return preview;
+    }
+
+    /**
      * Load tất cả assets. Gọi 1 lần khi khởi tạo game.
      */
     public void loadAll(boolean isGirl) {
@@ -56,7 +82,7 @@ public class AssetManager {
 
         // Player sprite sheet (4 directions x 4 frames = 16 frames, 32x32 each)
         spriteSheets.put(Constants.KEY_PLAYER,
-                new SpriteSheet(loadOrGenerate(Constants.ASSET_PLAYER, () -> gen.generatePlayerSheet(isGirl)),
+                new SpriteSheet(loadPlayer(isGirl, gen),
                         Constants.SPRITE_SIZE, Constants.SPRITE_SIZE));
 
         // NPC sprite sheets

@@ -36,11 +36,11 @@ Tiny Village là một game 2D pixel art được phát triển bằng **Java 17
 ### Giao Diện
 - **Background**: Gradient bầu trời xanh (#E0F7FA) → bãi cỏ (#B2EBF2)
 - **Clouds**: Hoạt ảnh mây trôi nhẹ nhàng
-- **Character Cards**: 
-  - Girl - mặc định option 0, preview lấy từ `src/main/resources/assets/player.png`
-  - Boy - option 1, preview lấy từ `src/main/resources/assets/player2.png`
-  - Preview dùng frame idle nhìn xuống trong spritesheet 32x32, scale lên trên card
-  - Khi được chọn: Viền màu, hiệu ứng bouncing
+- **Character Cards**:
+   - Girl - mặc định option 0, preview ưu tiên lấy từ `src/main/resources/assets/player_preview.png`
+   - Boy - option 1, preview ưu tiên lấy từ `src/main/resources/assets/player2_preview.png`
+   - Nếu thiếu file preview, game fallback về frame idle nhìn xuống trong spritesheet `player.png` / `player2.png`, rồi scale lên trên card
+   - Khi được chọn: Viền màu, hiệu ứng bouncing
 
 ### Điều Khiển
 ```
@@ -851,9 +851,10 @@ AssetManager.loadAll()
     │   ├─ Boy: kiểm tra src/main/resources/assets/player2.png
     │   ├─ Nếu file tương ứng không tồn tại: fallback gọi PixelArtGenerator.generatePlayerSheet(isGirl)
     │
-    ├─► Character Selection Screen gọi AssetManager.getPlayerPreview(isGirl)
-    │   ├─ Load riêng frame idle nhìn xuống từ player.png/player2.png để hiển thị card chọn nhân vật
-    │   └─ Không đánh dấu loadAll() đã hoàn tất, nên vào game vẫn load đúng spritesheet theo lựa chọn
+   ├─► Character Selection Screen gọi AssetManager.getPlayerPreview(isGirl)
+   │   ├─ Ưu tiên load ảnh preview riêng từ player_preview.png / player2_preview.png
+   │   ├─ Nếu thiếu preview asset: fallback về frame idle nhìn xuống từ player.png / player2.png
+   │   └─ Không đánh dấu loadAll() đã hoàn tất, nên vào game vẫn load đúng spritesheet theo lựa chọn
     │
     ├─► Các asset khác kiểm tra file ảnh trong src/main/resources/assets/ (vd: tiles.png, cat.png)
     │   ├─ Nếu TỒN TẠI: Load Image từ file (Cho phép thay đổi giao diện không cần code)
@@ -861,7 +862,7 @@ AssetManager.loadAll()
     │
     └─► Đưa Image/SpriteSheet vào bộ nhớ (HashMap) để sử dụng
 ```
-Game hỗ trợ thay đổi toàn bộ visual (nhân vật, map, item, reward icon) chỉ bằng cách copy file `.png` (khung hình 32x32px) vào thư mục `assets`. Riêng player cần hai spritesheet: `player.png` cho Girl và `player2.png` cho Boy.
+Game hỗ trợ thay đổi toàn bộ visual (nhân vật, map, item, reward icon) chỉ bằng cách copy file `.png` vào thư mục `assets`. Riêng player có thể dùng hai spritesheet `player.png` cho Girl và `player2.png` cho Boy, đồng thời có thể cung cấp preview riêng bằng `player_preview.png` và `player2_preview.png` cho màn hình chọn nhân vật.
 
 ---
 

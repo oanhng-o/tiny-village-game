@@ -64,8 +64,10 @@ public class AssetManager {
         Image preview = images.get(key);
         if (preview == null) {
             PixelArtGenerator generator = new PixelArtGenerator();
-            preview = new SpriteSheet(loadPlayer(isGirl, generator),
-                    Constants.SPRITE_SIZE, Constants.SPRITE_SIZE).getFrame(0, 0);
+            String previewFile = isGirl ? Constants.ASSET_PLAYER_PREVIEW_GIRL : Constants.ASSET_PLAYER_PREVIEW_BOY;
+            preview = loadOrGenerate(previewFile,
+                    () -> new SpriteSheet(loadPlayer(isGirl, generator),
+                            Constants.SPRITE_SIZE, Constants.SPRITE_SIZE).getFrame(0, 0));
             images.put(key, preview);
         }
         return preview;

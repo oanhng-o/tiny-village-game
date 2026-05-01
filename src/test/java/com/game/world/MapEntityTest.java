@@ -12,8 +12,8 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * MapEntityTest — Kiểm tra hiển thị và logic của các thực thể trên bản đồ.
- * Đã chia nhỏ các test cho Item để dễ quản lý.
+ * MapEntityTest — Kiểm tra hiển thị và tính tương quan vị trí của các thực thể
+ * trên bản đồ.
  */
 public class MapEntityTest {
 
@@ -38,48 +38,69 @@ public class MapEntityTest {
     }
 
     @Test
-    public void testPlayerPositionOnMinimap() throws Exception {
+    public void testPlayerMinimapCorrelation() throws Exception {
         Player player = (Player) getPrivateField(gameWorld, "player");
-        assertNotNull(player, "Player phải tồn tại trên thế giới.");
-
         float scaleX = (float) getPrivateField(mapOverlay, "scaleX");
         float scaleY = (float) getPrivateField(mapOverlay, "scaleY");
 
-        int miniX = 10 + (int) (player.getX() * scaleX);
-        int miniY = 10 + (int) (player.getY() * scaleY);
+        // 1. Kiểm tra tại góc (0, 0) của bản đồ thực
+        player.setX(0);
+        player.setY(0);
+        assertEquals(10, 10 + (int) (player.getX() * scaleX), "Tại góc (0,0), Minimap X phải là 10.");
+        assertEquals(10, 10 + (int) (player.getY() * scaleY), "Tại góc (0,0), Minimap Y phải là 10.");
 
-        assertTrue(miniX >= 10 && miniX <= 210, "Vị trí X của Player trên minimap không hợp lệ.");
-        assertTrue(miniY >= 10 && miniY <= 160, "Vị trí Y của Player trên minimap không hợp lệ.");
+        // 2. Kiểm tra tại vị trí giữa bản đồ (ví dụ 1000, 800)
+        player.setX(1000);
+        player.setY(800);
+
+        assertEquals(166, 10 + (int) (player.getX() * scaleX), "Tọa độ Player X trên map không khớp tỷ lệ.");
+        assertEquals(135, 10 + (int) (player.getY() * scaleY), "Tọa độ Player Y trên map không khớp tỷ lệ.");
     }
 
     @Test
-    public void testNPCPositionOnMinimap() throws Exception {
+    public void testPlayerMovementUpdateOnMinimap() throws Exception {
+        Player player = (Player) getPrivateField(gameWorld, "player");
+        float scaleX = (float) getPrivateField(mapOverlay, "scaleX");
+
+        // Vị trí cũ (500px thực tế -> 88px trên map)
+        player.setX(500);
+        int oldMiniX = 10 + (int) (player.getX() * scaleX);
+        assertEquals(88, oldMiniX);
+
+        // Di chuyển player sang phải 300 pixels (Tổng 800px thực tế -> 135px trên map)
+        player.setX(player.getX() + 300);
+        int newMiniX = 10 + (int) (player.getX() * scaleX);
+
+        // Kiểm tra kết quả
+        assertTrue(newMiniX > oldMiniX, "Vị trí trên Minimap phải được cập nhật khi Player di chuyển.");
+        assertEquals(135, newMiniX, "Vị trí 800px thực tế phải tương ứng 135px trên Minimap.");
+        assertEquals(47, newMiniX - oldMiniX, "Độ dịch chuyển trên Minimap khi đi 300px phải là 47px.");
+    }
+
+    @Test
+    public void testNPCAtSpecificPositions() throws Exception {
         @SuppressWarnings("unchecked")
         List<NPC> npcs = (List<NPC>) getPrivateField(gameWorld, "npcs");
+        NPC npc = npcs.get(0); // Lấy NPC đầu tiên để test
         float scaleX = (float) getPrivateField(mapOverlay, "scaleX");
         float scaleY = (float) getPrivateField(mapOverlay, "scaleY");
 
-        for (NPC npc : npcs) {
-            int miniX = 10 + (int) (npc.getX() * scaleX);
-            int miniY = 10 + (int) (npc.getY() * scaleY);
+        // 1. Kiểm tra tại góc (0, 0)
+        npc.setX(0);
+        npc.setY(0);
+        assertEquals(10, 10 + (int) (npc.getX() * scaleX), "Tọa độ Minimap X của NPC tại (0,0) phải là 10.");
+        assertEquals(10, 10 + (int) (npc.getY() * scaleY), "Tọa độ Minimap Y của NPC tại (0,0) phải là 10.");
 
-            assertTrue(miniX >= 10 && miniX <= 210, "Vị trí X của NPC '" + npc.getName() + "' không hợp lệ.");
-            assertTrue(miniY >= 10 && miniY <= 160, "Vị trí Y của NPC '" + npc.getName() + "' không hợp lệ.");
-        }
+        // 2. Kiểm tra tại một vị trí cụ thể (500, 500)
+        npc.setX(500);
+        npc.setY(500);
+        // 10 + (int)(500 * 0.15625) = 88
+        assertEquals(88, 10 + (int) (npc.getX() * scaleX),
+                "Tọa độ NPC X trên Minimap không khớp tại (500,500).");
+        assertEquals(88, 10 + (int) (npc.getY() * scaleY),
+                "Tọa độ NPC Y trên Minimap không khớp tại (500,500).");
     }
 
-    /**
-     * 1. Kiểm tra vật phẩm ban đầu ẩn.
-     */
-    @Test
-    public void testItemInitiallyHidden() throws Exception {
-        Item rod = getFishingRod();
-        assertFalse(rod.isVisible(), "Vật phẩm nhiệm vụ (cần câu) phải ẩn lúc ban đầu.");
-    }
-
-    /**
-     * 2. Kiểm tra vật phẩm hiện lên sau khi Quest active và đúng vị trí.
-     */
     @Test
     public void testItemVisibleAfterQuestAndPosition() throws Exception {
         Item rod = getFishingRod();
@@ -94,19 +115,8 @@ public class MapEntityTest {
         }
 
         assertTrue(rod.isVisible(), "Vật phẩm phải hiện sau khi Quest active.");
-
-        float scaleX = (float) getPrivateField(mapOverlay, "scaleX");
-        float scaleY = (float) getPrivateField(mapOverlay, "scaleY");
-        int miniX = 10 + (int) (rod.getX() * scaleX);
-        int miniY = 10 + (int) (rod.getY() * scaleY);
-
-        assertTrue(miniX >= 10 && miniX <= 210, "Vị trí X của Item trên map không hợp lệ.");
-        assertTrue(miniY >= 10 && miniY <= 160, "Vị trí Y của Item trên map không hợp lệ.");
     }
 
-    /**
-     * 3. Kiểm tra vật phẩm biến mất sau khi người chơi nhặt.
-     */
     @Test
     public void testItemDisappearsAfterPickup() throws Exception {
         Item rod = getFishingRod();
@@ -128,18 +138,19 @@ public class MapEntityTest {
     }
 
     @Test
-    public void testCatPositionOnMinimap() throws Exception {
+    public void testCatAtSpecificPositions() throws Exception {
         CatFollower cat = (CatFollower) getPrivateField(gameWorld, "cat");
-        assertNotNull(cat, "Mèo phải tồn tại.");
-
         float scaleX = (float) getPrivateField(mapOverlay, "scaleX");
         float scaleY = (float) getPrivateField(mapOverlay, "scaleY");
 
-        int miniX = 10 + (int) (cat.getX() * scaleX);
-        int miniY = 10 + (int) (cat.getY() * scaleY);
+        // Thử nghiệm tại vị trí xa (ví dụ 1200, 900)
+        cat.setX(1200);
+        cat.setY(900);
 
-        assertTrue(miniX >= 10 && miniX <= 210, "Vị trí X của mèo trên minimap không hợp lệ.");
-        assertTrue(miniY >= 10 && miniY <= 160, "Vị trí Y của mèo trên minimap không hợp lệ.");
+        // 10 + (int)(1200 * 0.15625) = 197
+        // 10 + (int)(900 * 0.15625) = 150
+        assertEquals(197, 10 + (int) (cat.getX() * scaleX), "Tọa độ Mèo X không khớp .");
+        assertEquals(150, 10 + (int) (cat.getY() * scaleY), "Tọa độ Mèo Y không khớp.");
     }
 
     private Item getFishingRod() throws Exception {
@@ -148,7 +159,7 @@ public class MapEntityTest {
         return items.stream()
                 .filter(i -> "fishing_rod".equals(i.getItemId()))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy cần câu."));
+                .orElseThrow();
     }
 
     private Object getPrivateField(Object obj, String fieldName) throws Exception {

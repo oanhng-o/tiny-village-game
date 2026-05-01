@@ -104,17 +104,32 @@ public class MapEntityTest {
     @Test
     public void testItemVisibleAfterQuestAndPosition() throws Exception {
         Item rod = getFishingRod();
+        float scaleX = (float) getPrivateField(mapOverlay, "scaleX");
+        float scaleY = (float) getPrivateField(mapOverlay, "scaleY");
+
+        // Ban đầu vật phẩm phải ẩn
+        assertFalse(rod.isVisible(), "Vật phẩm quest phải ẩn khi chưa nhận quest.");
 
         // Kích hoạt quest (giả lập thông qua callback được set trong GameWorld)
         Object dialogSystem = getPrivateField(gameWorld, "dialogSystem");
-        Runnable onQuestStart = (Runnable) getPrivateField(dialogSystem, "onQuestStart");
+        // Lấy functional interface consumer để chạy thủ công
+        java.util.function.Consumer<String> onQuestStart = (java.util.function.Consumer<String>) getPrivateField(dialogSystem, "onQuestStart");
+        
         if (onQuestStart != null) {
-            onQuestStart.run();
+            onQuestStart.accept("fishing_rod");
         } else {
             rod.setVisible(true);
         }
 
         assertTrue(rod.isVisible(), "Vật phẩm phải hiện sau khi Quest active.");
+
+        // Kiểm tra tọa độ trên Minimap (Fishing rod tại 1120, 800)
+        // Offset (10, 10) + (1120 * 0.15625, 800 * 0.15625) = (185, 135)
+        int miniX = 10 + (int) (rod.getX() * scaleX);
+        int miniY = 10 + (int) (rod.getY() * scaleY);
+
+        assertEquals(185, miniX, "Tọa độ X của vật phẩm trên Minimap không chính xác.");
+        assertEquals(135, miniY, "Tọa độ Y của vật phẩm trên Minimap không chính xác.");
     }
 
     @Test

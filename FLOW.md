@@ -140,8 +140,8 @@ Khi Character Selection hoàn tất:
              │   └─ NPC 4: "Bác làm vườn" (quest hạt giống, tile 5,25)
              │
              ├─► Items
-             │   ├─ Fishing Rod (hidden, spawns sau quest cần câu)
-             │   └─ Seeds (hidden, spawns sau quest hạt giống ở tile 32,5)
+             │   ├─ Fishing Rod (hidden, random 1 vị trí hợp lệ khắp map khi quest active)
+             │   └─ Seeds (hidden, random 1 vị trí hợp lệ khắp map khi quest active)
              │
              ├─► InventorySystem
              │   └─ Runtime-only, reset mỗi lần chơi mới
@@ -219,6 +219,7 @@ Khi Character Selection hoàn tất:
 - Quest state theo `questId`
 - Countdown mở lại của quest lặp `seeds`
 - Danh sách quest item đã nhặt
+- Vị trí spawn hiện tại của quest item đang dùng trong world
 - Inventory runtime (hoa/cây/cá và quantity)
 - Cat state dài hạn: unlocked, vị trí, mood, affection, state
 
@@ -229,7 +230,7 @@ Khi Character Selection hoàn tất:
 - Notification tạm thời
 - Cooldown pet/feed/call đang đếm
 
-Load luôn khôi phục tiến trình dài hạn và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
+Load luôn khôi phục tiến trình dài hạn, bao gồm cả vị trí quest item đang hoạt động, và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
 
 ### Continue / New Game Flow
 ```
@@ -386,7 +387,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - QuestSystem.startQuest("fishing_rod") → ACTIVE
 
 **Stage 2: ACTIVE**
-- Fishing Rod item trở thành visible trên map
+- Fishing Rod item được chọn ngẫu nhiên vào 1 ô hợp lệ bất kỳ trên map rồi trở thành visible
 - Người chơi di chuyển đến vị trí item
 - Khi va chạm với item → Auto pickup
 - QuestSystem.addItem("fishing_rod")
@@ -415,7 +416,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - QuestSystem.startQuest("seeds") → ACTIVE
 
 **Stage 2: ACTIVE**
-- Seeds item trở thành visible ở khu hoa phía trên-phải, tile `(32,5)`
+- Seeds item được chọn ngẫu nhiên vào 1 ô hợp lệ bất kỳ trên map rồi trở thành visible
 - Người chơi di chuyển đến vị trí item
 - Khi va chạm với item → Auto pickup
 - QuestSystem.addItem("seeds")
@@ -425,7 +426,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - Dialog hiển thị lời cảm ơn trước
 - QuestSystem.completeQuest("seeds") → COMPLETED
 - Quest indicator hiển thị `✓ Hoàn thành!` trong 10 giây đầu
-- Sau 10 giây, cùng vị trí đó đổi sang countdown 3600 giây trước khi quest tự mở lại
+- Sau 10 giây, cùng quest đó đổi sang countdown 3600 giây trước khi quest tự mở lại
 
 **Kết Quả:**
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
@@ -444,7 +445,11 @@ Item (Fishing Rod / Seeds) Object
     │ (visible = false, tồn tại trên map nhưng không render)
     │
     ├─ Quest tương ứng ACTIVE
-    │ └─ visible = true (render sprite item)
+   │ ├─ Chọn ngẫu nhiên 1 tile hợp lệ trên toàn bộ map
+   │ └─ visible = true (render sprite item)
+   │
+   ├─ Continue / Load khi quest vẫn ACTIVE
+   │ └─ Khôi phục lại đúng tọa độ spawn đã save trước đó
     │
     └─► Player.update() → Check collision với Item.getBounds()
         │
@@ -796,8 +801,8 @@ Player.update():
    - TileMap with grass, water, trees, benches
    - Player at position (400, 300)
    - 4 NPCs scattered, gồm Bác làm vườn ở góc dưới-trái
-   - Fishing Rod item (hidden)
-   - Seeds item (hidden ở khu hoa phía trên-phải)
+   - Fishing Rod item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
+   - Seeds item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
    - InventorySystem empty (runtime-only)
    - CatFollower at (300, 300) - IDLE
    - Start GameLoop
@@ -810,7 +815,7 @@ Player.update():
    - Dialog: "Tìm cần câu cho em" (typewriter effect)
    - User: Press Space/Enter
    - QuestSystem.startQuest("fishing_rod") → ACTIVE
-   - Fishing Rod becomes visible on map
+   - Fishing Rod random 1 vị trí hợp lệ khắp map rồi becomes visible on map
 
 5. [QUEST ACTIVE]
    Player explores:
@@ -831,7 +836,7 @@ Player.update():
    Player visits "Bác làm vườn" at tile (5,25)
    - Dialog asks for seeds
    - QuestSystem.startQuest("seeds") → ACTIVE
-   - Seeds become visible at tile (32,5)
+   - Seeds random 1 vị trí hợp lệ khắp map rồi becomes visible
    - Auto pickup → QuestSystem.addItem("seeds")
    - Return to gardener → QuestSystem.completeQuest("seeds") → COMPLETED
    - Random reward: rose / sunflower / tulip / bonsai
@@ -867,6 +872,7 @@ Player.update():
 11. [SAVE / LOAD]
    - Close game → app tự động save lại lần cuối vào đúng slot giới tính
    - Mở lại game → Character Selection → Continue / New Game Screen → chọn Continue để load slot tương ứng
+   - Nếu quest item đang active nhưng chưa nhặt, game restore lại đúng vị trí spawn trước khi thoát
 
 12. [END]
    User closes window → Application.stop()
@@ -1067,11 +1073,11 @@ src/main/java/com/game/
 │
 ├── save/
 │   ├── SaveData.java
-│   │   └─ Snapshot immutable cho long-lived progress
+│   │   └─ Snapshot immutable cho long-lived progress, gồm cả tọa độ quest item
 │   └── SaveSystem.java
-│       ├─ Single-slot save bằng java.util.Properties
-│       ├─ Đường dẫn `%USERPROFILE%/.tiny-village-game/save.properties`
-│       └─ Parse / normalize dữ liệu save khi load
+│       ├─ Save theo slot giới tính bằng java.util.Properties
+│       ├─ Đường dẫn `%USERPROFILE%/.tiny-village-game/save-girl.properties` / `save-boy.properties`
+│       └─ Parse / normalize dữ liệu save, gồm cả tọa độ quest item, khi load
 │
 ├── entity/
 │   ├── Entity.java (abstract)

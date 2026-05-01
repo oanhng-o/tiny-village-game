@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * GameWorld — Central manager: giữ tất cả entities, map, systems.
@@ -93,12 +94,7 @@ public class GameWorld {
 
         // Setup quest callbacks
         dialogSystem.setOnQuestStart((questId) -> {
-            // Show quest item on map
-            for (Item item : items) {
-                if (questId.equals(item.getItemId())) {
-                    item.setVisible(true);
-                }
-            }
+            activateQuestItem(questId);
         });
 
         dialogSystem.setOnQuestComplete((questId) -> {
@@ -155,7 +151,7 @@ public class GameWorld {
             ),
             List.of(
                 "Anh/chị tìm được cần câu chưa ạ?",
-                "Em nhớ lúc nãy chạy qua mấy bụi cây phía góc công viên..."
+                "Em chỉ nhớ là mình chạy khắp công viên thôi..."
             ),
             List.of(
                 "Ôi cần câu của em! Cảm ơn anh/chị nhiều lắm! 🎉",
@@ -172,12 +168,12 @@ public class GameWorld {
             QuestSystem.SEEDS_QUEST_ID,
             List.of(
                 "Chào cháu, bác đang chăm vườn hoa ở góc này.",
-                "Sáng nay bác làm rơi túi hạt giống khi đi qua khu hoa phía trên công viên.",
+                "Sáng nay bác làm rơi túi hạt giống khi đi dạo quanh công viên.",
                 "Cháu giúp bác tìm lại túi hạt giống được không?"
             ),
             List.of(
                 "Cháu tìm thấy túi hạt giống của bác chưa?",
-                "Bác nhớ nó rơi gần những luống hoa phía trên bên phải công viên."
+                "Bác chỉ nhớ là đã mang nó đi khắp công viên thôi."
             ),
             List.of(
                 "Đúng là túi hạt giống của bác rồi!",
@@ -200,6 +196,102 @@ public class GameWorld {
         Item seeds = new Item(QuestSystem.SEEDS_QUEST_ID, 32 * TileMap.TILE_SIZE, 5 * TileMap.TILE_SIZE);
         seeds.setVisible(false); // Hidden until quest active
         items.add(seeds);
+    }
+
+    private void activateQuestItem(String questId) {
+        for (Item item : items) {
+            if (questId.equals(item.getItemId()) && !item.isCollected()) {
+                assignRandomSpawnPosition(item);
+                item.setVisible(true);
+            }
+        }
+    }
+
+    private void assignRandomSpawnPosition(Item item) {
+        List<int[]> candidates = collectQuestSpawnCandidates(item.getItemId());
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        int[] selectedTile = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+        item.setX(selectedTile[0] * TileMap.TILE_SIZE);
+        item.setY(selectedTile[1] * TileMap.TILE_SIZE);
+    }
+
+    private List<int[]> collectQuestSpawnCandidates(String itemId) {
+        List<int[]> candidates = new ArrayList<>();
+
+        if (!QuestSystem.FISHING_ROD_QUEST_ID.equals(itemId)
+                && !QuestSystem.SEEDS_QUEST_ID.equals(itemId)) {
+            return candidates;
+        }
+
+        for (int row = 0; row < TileMap.MAP_ROWS; row++) {
+            for (int col = 0; col < TileMap.MAP_COLS; col++) {
+                Tile tile = tileMap.getTile(col, row);
+                if (!isAllowedQuestSpawnTile(itemId, tile) || isSpawnTileOccupied(col, row)) {
+                    continue;
+                }
+                candidates.add(new int[] { col, row });
+            }
+        }
+
+        return candidates;
+    }
+
+    private boolean isAllowedQuestSpawnTile(String itemId, Tile tile) {
+        if (tile.isSolid()) {
+            return false;
+        }
+
+        if (QuestSystem.FISHING_ROD_QUEST_ID.equals(itemId)) {
+            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+        }
+
+        if (QuestSystem.SEEDS_QUEST_ID.equals(itemId)) {
+            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+        }
+
+        return false;
+    }
+
+    private boolean isSpawnTileOccupied(int col, int row) {
+        Rectangle2D tileBounds = new Rectangle2D(
+                col * TileMap.TILE_SIZE,
+                row * TileMap.TILE_SIZE,
+                TileMap.TILE_SIZE,
+                TileMap.TILE_SIZE);
+
+        if (player.getFullBounds().intersects(tileBounds) || cat.getFullBounds().intersects(tileBounds)) {
+            return true;
+        }
+
+        for (NPC npc : npcs) {
+            if (npc.getFullBounds().intersects(tileBounds)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Map<String, SaveData.QuestItemPosition> captureQuestItemPositions() {
+        Map<String, SaveData.QuestItemPosition> positions = new LinkedHashMap<>();
+        for (Item item : items) {
+            positions.put(item.getItemId(), new SaveData.QuestItemPosition(item.getX(), item.getY()));
+        }
+        return positions;
+    }
+
+    private void restoreQuestItemPositions(Map<String, SaveData.QuestItemPosition> positions) {
+        for (Item item : items) {
+            SaveData.QuestItemPosition position = positions.get(item.getItemId());
+            if (position == null) {
+                continue;
+            }
+            item.setX(position.x());
+            item.setY(position.y());
+        }
     }
 
     /**
@@ -523,6 +615,7 @@ public class GameWorld {
                 questSystem.getQuestStatesSnapshot(),
                 new LinkedHashMap<>(questResetTimers),
                 questSystem.getCollectedItemsSnapshot(),
+                captureQuestItemPositions(),
                 inventorySystem.getItemCountsSnapshot(),
                 cat.isCareUnlocked(),
                 cat.getX(),
@@ -537,6 +630,7 @@ public class GameWorld {
         questResetTimers.clear();
         questResetTimers.putAll(saveData.questTimers());
         questSystem.replaceCollectedItems(saveData.collectedQuestItems());
+        restoreQuestItemPositions(saveData.questItemPositions());
         inventorySystem.replaceItemCounts(saveData.inventoryItems());
 
         if (questSystem.isQuestCompleted(QuestSystem.SEEDS_QUEST_ID)
@@ -553,7 +647,7 @@ public class GameWorld {
         int catAffection = saveData.catUnlocked() ? saveData.catAffection() : 0;
         cat.restoreProgressState(player, catUnlocked, saveData.catX(), saveData.catY(), saveData.catState(), catMood, catAffection);
 
-        syncQuestItemsFromProgress();
+        syncQuestItemsFromProgress(saveData.questItemPositions());
 
         player.setState(Player.PlayerState.NORMAL);
         inventoryOpen = false;
@@ -566,12 +660,15 @@ public class GameWorld {
         updateQuestResetTimers(0);
     }
 
-    private void syncQuestItemsFromProgress() {
+    private void syncQuestItemsFromProgress(Map<String, SaveData.QuestItemPosition> savedPositions) {
         for (Item item : items) {
             boolean collected = questSystem.hasItem(item.getItemId());
             item.setCollected(collected);
             boolean shouldBeVisible = !collected
                     && questSystem.getQuestState(item.getItemId()) == QuestSystem.QuestState.ACTIVE;
+            if (shouldBeVisible && !savedPositions.containsKey(item.getItemId())) {
+                assignRandomSpawnPosition(item);
+            }
             item.setVisible(shouldBeVisible);
         }
     }

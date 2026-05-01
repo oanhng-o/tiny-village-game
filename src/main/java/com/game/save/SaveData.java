@@ -19,6 +19,7 @@ public record SaveData(
         Map<String, QuestSystem.QuestState> questStates,
     Map<String, Double> questTimers,
         Set<String> collectedQuestItems,
+    Map<String, QuestItemPosition> questItemPositions,
         Map<String, Integer> inventoryItems,
         boolean catUnlocked,
         double catX,
@@ -31,6 +32,7 @@ public record SaveData(
         questStates = copyQuestStates(questStates);
         questTimers = copyQuestTimers(questTimers);
         collectedQuestItems = copyCollectedItems(collectedQuestItems);
+        questItemPositions = copyQuestItemPositions(questItemPositions);
         inventoryItems = copyInventoryItems(inventoryItems);
         catState = catState == null ? CatFollower.State.IDLE : catState;
     }
@@ -59,11 +61,22 @@ public record SaveData(
         return copy;
     }
 
+    private static Map<String, QuestItemPosition> copyQuestItemPositions(Map<String, QuestItemPosition> source) {
+        Map<String, QuestItemPosition> copy = new LinkedHashMap<>();
+        if (source != null) {
+            copy.putAll(source);
+        }
+        return copy;
+    }
+
     private static Map<String, Integer> copyInventoryItems(Map<String, Integer> source) {
         Map<String, Integer> copy = new LinkedHashMap<>();
         if (source != null) {
             copy.putAll(source);
         }
         return copy;
+    }
+
+    public record QuestItemPosition(double x, double y) {
     }
 }

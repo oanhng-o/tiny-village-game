@@ -39,8 +39,10 @@ public class SaveSystem {
     private static final String PREFIX_QUEST = "quest.";
     private static final String PREFIX_QUEST_TIMER = "questTimer.";
     private static final String PREFIX_COLLECTED_ITEM = "questItem.";
+    private static final String PREFIX_QUEST_ITEM_POSITION_X = "questItemPosX.";
+    private static final String PREFIX_QUEST_ITEM_POSITION_Y = "questItemPosY.";
     private static final String PREFIX_INVENTORY = "inventory.";
-    private static final int CURRENT_VERSION = 1;
+    private static final int CURRENT_VERSION = 2;
 
     private final Path saveDirectory;
 
@@ -91,6 +93,10 @@ public class SaveSystem {
         for (String itemId : data.collectedQuestItems()) {
             properties.setProperty(PREFIX_COLLECTED_ITEM + itemId, Boolean.TRUE.toString());
         }
+        for (Map.Entry<String, SaveData.QuestItemPosition> entry : data.questItemPositions().entrySet()) {
+            properties.setProperty(PREFIX_QUEST_ITEM_POSITION_X + entry.getKey(), Double.toString(entry.getValue().x()));
+            properties.setProperty(PREFIX_QUEST_ITEM_POSITION_Y + entry.getKey(), Double.toString(entry.getValue().y()));
+        }
         for (Map.Entry<String, Integer> entry : data.inventoryItems().entrySet()) {
             properties.setProperty(PREFIX_INVENTORY + entry.getKey(), Integer.toString(entry.getValue()));
         }
@@ -127,6 +133,8 @@ public class SaveSystem {
         Map<String, QuestSystem.QuestState> questStates = new LinkedHashMap<>();
         Map<String, Double> questTimers = new LinkedHashMap<>();
         Set<String> collectedQuestItems = new LinkedHashSet<>();
+        Map<String, Double> questItemPosX = new LinkedHashMap<>();
+        Map<String, Double> questItemPosY = new LinkedHashMap<>();
         Map<String, Integer> inventoryItems = new LinkedHashMap<>();
 
         for (String key : properties.stringPropertyNames()) {
@@ -142,12 +150,26 @@ public class SaveSystem {
                 }
             } else if (key.startsWith(PREFIX_COLLECTED_ITEM) && Boolean.parseBoolean(value)) {
                 collectedQuestItems.add(key.substring(PREFIX_COLLECTED_ITEM.length()));
+            } else if (key.startsWith(PREFIX_QUEST_ITEM_POSITION_X)) {
+                String itemId = key.substring(PREFIX_QUEST_ITEM_POSITION_X.length());
+                questItemPosX.put(itemId, parseDouble(value, 0));
+            } else if (key.startsWith(PREFIX_QUEST_ITEM_POSITION_Y)) {
+                String itemId = key.substring(PREFIX_QUEST_ITEM_POSITION_Y.length());
+                questItemPosY.put(itemId, parseDouble(value, 0));
             } else if (key.startsWith(PREFIX_INVENTORY)) {
                 String itemId = key.substring(PREFIX_INVENTORY.length());
                 int count = parseInt(value, 0);
                 if (count > 0) {
                     inventoryItems.put(itemId, count);
                 }
+            }
+        }
+
+        Map<String, SaveData.QuestItemPosition> questItemPositions = new LinkedHashMap<>();
+        for (Map.Entry<String, Double> entry : questItemPosX.entrySet()) {
+            Double y = questItemPosY.get(entry.getKey());
+            if (y != null) {
+                questItemPositions.put(entry.getKey(), new SaveData.QuestItemPosition(entry.getValue(), y));
             }
         }
 
@@ -159,6 +181,7 @@ public class SaveSystem {
                 questStates,
                 questTimers,
                 collectedQuestItems,
+                questItemPositions,
                 inventoryItems,
                 Boolean.parseBoolean(properties.getProperty(KEY_CAT_UNLOCKED, Boolean.FALSE.toString())),
                 parseDouble(properties.getProperty(KEY_CAT_X), 25 * 32.0),

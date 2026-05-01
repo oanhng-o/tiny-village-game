@@ -107,10 +107,10 @@ public class NPC extends Entity {
             gc.setFont(Font.font("Monospaced", 16));
             gc.fillText("!", renderX + width / 2.0 - 4, renderY - 22 + bounceOffset);
 
-            // "Nhấn E" hint
+            // "Nhấn Enter" hint
             gc.setFont(Font.font("Monospaced", 8));
             gc.setFill(Color.web("#FFFFFF", 0.7));
-            gc.fillText("[E]", renderX + width / 2.0 - 8, renderY - 30 + bounceOffset);
+            gc.fillText("[Enter]", renderX + width / 2.0 - 18, renderY - 30 + bounceOffset);
         }
     }
 

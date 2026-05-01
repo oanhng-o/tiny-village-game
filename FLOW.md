@@ -116,12 +116,20 @@ Khi Character Selection hoàn tất:
              │  │
              │  ├─ Nếu Inventory Overlay ACTIVE:
              │  │  ├─ I/Esc đóng kho
-             │  │  └─ Chặn movement/dialog/pickup
+             │  │  └─ Chặn movement/dialog/pickup/cat care
+             │  │
+             │  ├─ Nếu Cat Care Overlay ACTIVE:
+             │  │  ├─ C/Esc đóng menu chăm mèo
+             │  │  ├─ ↑/↓ chọn cá trong inventory runtime
+             │  │  ├─ Enter cho ăn vật phẩm đang chọn
+             │  │  └─ Chặn movement/dialog/pickup/fishing
              │  │
              │  ├─ Nếu Dialog INACTIVE:
              │  │  ├─ Cập nhật Player (vị trí, animation)
              │  │  ├─ Kiểm tra collision (tile, NPC)
-             │  │  ├─ Kiểm tra interaction (E key)
+             │  │  ├─ Enter: interaction với NPC
+             │  │  ├─ E: vuốt mèo khi ở gần
+             │  │  ├─ C: gọi mèo hoặc mở Cat Care menu
              │  │  └─ Kiểm tra item pickup
              │  │
              │  ├─ Nếu Dialog ACTIVE:
@@ -129,7 +137,7 @@ Khi Character Selection hoàn tất:
              │  │  └─ Render dialog text + choices
              │  │
              │  ├─ Cập nhật CatFollower
-             │  │  └─ Nếu quest cần câu COMPLETED: Follow player
+             │  │  └─ Nếu quest cần câu COMPLETED: Follow / Calling / cooldown chăm sóc
              │  │
              │  └─ Cập nhật Camera
              │
@@ -141,7 +149,8 @@ Khi Character Selection hoàn tất:
              │  ├─ Render NPCs (+ name tags)
              │  ├─ Render Player
              │  ├─ Render CatFollower
-             │  └─ Render DialogSystem (nếu active)
+             │  ├─ Render DialogSystem (nếu active)
+             │  └─ Render Cat Care Overlay (nếu active)
              │
              └─ InputHandler.update() [clear justPressed keys]
 ```
@@ -156,9 +165,13 @@ W / ↑                  : Di chuyển lên
 S / ↓                  : Di chuyển xuống
 A / ←                  : Di chuyển sang trái
 D / →                  : Di chuyển sang phải
-E / Enter              : Tương tác với NPC
+Enter                  : Tương tác với NPC
+E                      : Vuốt mèo khi ở gần
+C                      : Gọi mèo / mở menu chăm mèo
+F                      : Câu cá khi đứng gần nước
+M                      : Mở / đóng bản đồ nhỏ
 I                      : Mở / đóng kho lưu trữ
-Esc                    : Đóng kho lưu trữ khi đang mở
+Esc                    : Đóng kho lưu trữ hoặc Cat Care menu
 ```
 
 ### Quy Trình Chuyển Động
@@ -184,13 +197,36 @@ Player gần NPC (trong interactionRadius)
     │
     ├─ Hiển thị visual indicator ("!" hoặc "...")
     │
-    └─ Người chơi bấm E/Enter
+   └─ Người chơi bấm Enter
        │
        └─► DialogSystem.startDialog(npc, dialogData)
            ├─ State: INACTIVE → SHOWING_TEXT
            ├─ Lấy dialog text của NPC
            ├─ Chạy typewriter effect
            └─ Khi text đủ: chuyển sang SHOWING_CHOICES (nếu có)
+```
+
+### Quy Trình Cat Care
+```
+Player đã hoàn thành quest `fishing_rod`
+   │
+   ├─ Bấm C khi mèo ở xa
+   │  └─ CatFollower: FOLLOWING → CALLING
+   │  └─ Mèo chạy nhanh về gần Player, sau đó quay lại FOLLOWING
+   │
+   ├─ Bấm E khi mèo ở gần
+   │  └─ Nếu pet cooldown = 0:
+   │     ├─ mood += 5
+   │     ├─ affection += 2
+   │     └─ Bắt đầu pet cooldown 6 giây
+   │
+   └─ Bấm C khi mèo đã ở gần
+      └─ catCareOpen = true
+        ├─ Hiển thị mood, heart level, affection, cooldown
+        ├─ Hiển thị danh sách cá trong inventory runtime
+        ├─ ↑/↓ chọn cá
+        ├─ Enter: cho ăn cá đã chọn
+        └─ C/Esc: đóng menu
 ```
 
 ---
@@ -262,6 +298,9 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 **Kết Quả:**
 - CatFollower: IDLE → FOLLOWING
 - Mèo bắt đầu theo sát Player
+- Cat Care được mở khóa với mood ban đầu `60/100`
+- Heart level ban đầu là `1`, suy ra từ affection runtime
+- Player có thể dùng `C` để gọi / chăm mèo và `E` để vuốt mèo
 - Có thể tiếp tục explore hoặc nói chuyện NPC khác
 
 ### Quest: "Tìm hạt giống cho bác làm vườn" (`seeds`)
@@ -312,7 +351,7 @@ Item (Fishing Rod / Seeds) Object
 
 ---
 
-## 8. Garden Reward & Inventory
+## 8. Garden Reward, Fish Reward & Inventory
 
 ### Reward Flow
 ```
@@ -335,9 +374,20 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
 ```
 InventorySystem
     ├─ Lưu trong memory theo phiên chơi hiện tại
+   ├─ Chứa cả reward cây/hoa và cá câu được
     ├─ Không ghi file save/load
     ├─ Restart game/app → inventory trống lại
     └─ Hoàn thành quest hạt giống trong lần chơi mới → reward random lại
+```
+
+### Fish Reward Flow
+```
+Fishing Mini-game thắng
+   │
+   └─ InventorySystem.addRandomFishReward()
+      ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
+      ├─ Thêm vào inventory runtime với quantity +1
+      └─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
 ```
 
 ### Inventory Overlay
@@ -347,20 +397,23 @@ Người chơi nhấn I
     └─ inventoryOpen = true
        │
        ├─ Render panel "Kho lưu trữ"
-       ├─ Hiển thị icon, tên cây/hoa, số lượng
+      ├─ Hiển thị icon, tên cây/hoa/cá, số lượng
        ├─ Nếu chưa có item: "Chưa có vật phẩm nào"
        └─ I hoặc Esc → đóng overlay
 ```
+
+Inventory overlay chỉ để xem vật phẩm runtime. Hành động cho mèo ăn diễn ra trong Cat Care menu riêng, không thực hiện trực tiếp trong panel kho.
 
 Khi inventory overlay đang mở:
 - Player không di chuyển
 - Không tương tác NPC
 - Không nhặt item
+- Không mở Cat Care
 - World vẫn render phía sau overlay
 
 ---
 
-## 9. Cat Follower Behavior
+## 9. Cat Follower & Care Behavior
 
 ### States
 
@@ -377,6 +430,44 @@ Khi inventory overlay đang mở:
 - Cách Player: ~40-60 pixels
 - Sử dụng position history queue cho smooth trailing
 - Walk animation giống Player
+- Khi Player lại gần: hiển thị 2 badge phím `E` và `C` trên đầu mèo
+   theo cùng style với badge `F` khi đứng gần WATER
+```
+
+**CALLING (Player bấm `C` khi mèo ở xa)**
+```
+- Chỉ hoạt động sau khi quest `fishing_rod` đã COMPLETED
+- Mèo tăng tốc chạy về gần Player
+- Khi vào phạm vi gần: CALLING → FOLLOWING
+- Có call cooldown 2 giây để tránh spam
+```
+
+### Mood & Heart Level
+```
+Mood:
+   ├─ Thang 0 → 100
+   ├─ Mở khóa Cat Care: mood = 60
+   ├─ Vuốt ve thành công: +5 mood
+   └─ Cho ăn 1 cá: +15 mood
+
+Heart level:
+   ├─ Tính từ affection runtime, không lưu file
+   ├─ Mở khóa Cat Care: heart level = 1
+   ├─ Vuốt ve thành công: +2 affection
+   ├─ Cho ăn 1 cá: +8 affection
+   └─ Mốc heart:
+      ├─ 0-19   → Heart 1
+      ├─ 20-39  → Heart 2
+      ├─ 40-69  → Heart 3
+      ├─ 70-109 → Heart 4
+      └─ 110+   → Heart 5
+```
+
+### Cooldown
+```
+- Pet cooldown : 6 giây sau mỗi lần vuốt ve thành công
+- Feed cooldown: 10 giây sau mỗi lần cho ăn cá thành công
+- Call cooldown: 2 giây sau mỗi lần gọi mèo bằng C
 ```
 
 ### Quy Trình Following
@@ -399,6 +490,23 @@ CatFollower.update(dt, player)
        └─ Render sprite tại vị trí mới
            (luôn ở phía sau Player)
 ```
+
+   ### Quy Trình Cho Ăn
+   ```
+   Player đứng gần mèo + bấm C
+      │
+      └─ Cat Care menu mở ra
+         │
+         ├─ InventorySystem.getFishItems()
+         ├─ ↑/↓ chọn cá muốn dùng
+         ├─ Enter xác nhận
+         │   ├─ Nếu feed cooldown > 0: hiện notification chờ cooldown
+         │   ├─ Nếu có cá: consume 1 item từ inventory
+         │   ├─ CatFollower.feed()
+         │   └─ Tăng mood + affection, có thể tăng heart level
+         │
+         └─ C/Esc đóng menu
+   ```
 
 ---
 
@@ -441,7 +549,7 @@ Camera.update(player, gameWorld)
    └─ Sprite + Direction indicator
 
 5. CatFollower
-   └─ Sprite (trailing behind player)
+   └─ Sprite (trailing / calling / heart indicator)
 
 6. DialogSystem (UI overlay)
    └─ Dialog box + Text + Choices
@@ -450,7 +558,12 @@ Camera.update(player, gameWorld)
 
 7. Inventory Overlay (nếu đang mở)
    └─ Dim background + panel "Kho lưu trữ"
-   └─ Hiển thị reward cây/hoa trong phiên chơi
+   └─ Hiển thị reward cây/hoa/cá trong phiên chơi
+
+8. Cat Care Overlay (nếu đang mở)
+   └─ Dim background + panel "Chăm sóc mèo"
+   └─ Hiển thị mood, heart level, affection, cooldown
+   └─ Hiển thị danh sách cá để cho ăn
 ```
 
 ---
@@ -529,10 +642,19 @@ Player.update():
     │  ├─ Check if Player.interactionBounds
     │     overlaps with NPC.bounds
     │  │
-    │  └─ If overlap + E pressed:
+   │  └─ If overlap + Enter pressed:
     │     └─ startDialog(npc)
 
-// 3. Player vs Item Pickup
+// 3. Player vs Cat Care Interaction
+Player.update():
+   ├─ Check distance Player ↔ CatFollower
+   ├─ Nếu gần + E pressed:
+   │  ├─ Nếu pet cooldown = 0: CatFollower.pet()
+   │  └─ Nếu cooldown > 0: Hiện notification chờ
+   └─ Nếu gần + C pressed:
+      └─ Mở Cat Care menu
+
+// 4. Player vs Item Pickup
 Player.update():
     ├─ For each Item:
     │  ├─ Check if Player.bounds overlaps Item.bounds
@@ -571,7 +693,7 @@ Player.update():
    GameLoop 60 FPS:
    - Player presses W → moves up
    - Player sees NPC marker "!"
-   - Player presses E → Dialog starts
+   - Player presses Enter → Dialog starts
    - Dialog: "Tìm cần câu cho em" (typewriter effect)
    - User: Press Space/Enter
    - QuestSystem.startQuest("fishing_rod") → ACTIVE
@@ -602,21 +724,31 @@ Player.update():
    - InventorySystem stores reward with quantity x1
    - Notification shows reward name
 
-8. [INVENTORY]
+8. [FISHING & INVENTORY]
+   Player đứng gần hồ sau khi có cần câu:
+   - Nhấn F → vào fishing mini-game
+   - Thắng mini-game → random 1 cá vào InventorySystem
+
+9. [INVENTORY]
    User presses I:
    - Inventory overlay opens
    - Gameplay pauses while overlay is open
-   - Reward item appears with icon, name, quantity
+   - Reward cây/hoa/cá xuất hiện với icon, tên, quantity
    - User presses I or Esc to close
 
-9. [CAT FOLLOWING]
+10. [CAT FOLLOWING & CARE]
    Player explores with cat:
    - Cat follows at ~50px distance
-   - Cat animate walk when player moves
-   - Cat animate idle when player stops
+   - Khi lại gần mèo, hiện 2 badge `E` và `C` trên đầu mèo
+     giống kiểu badge `F` của fishing prompt
+   - Bấm C khi mèo ở xa → mèo chạy lại gần Player
+   - Bấm E khi mèo ở gần → mood +5, affection +2
+   - Bấm C khi mèo ở gần → mở Cat Care menu
+   - Chọn 1 con cá và bấm Enter → mèo ăn, mood +15, affection +8
+   - Heart level tăng dần theo affection runtime
    - Continue playing until close game
 
-10. [END]
+11. [END]
    User closes window → Game ends
    Next launch creates a new empty inventory
 ```
@@ -644,7 +776,8 @@ Main.java
         │   ├─ Camera
         │   ├─ DialogSystem
         │   ├─ QuestSystem
-        │   └─ InventorySystem (runtime rewards)
+      │   ├─ InventorySystem (runtime rewards + fish)
+      │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
         │
         ├─► InputHandler (Input tracking)
         │   ├─ keyPressed
@@ -704,7 +837,7 @@ Optimization Techniques:
             │
             ├─ Player moves (Input: WASD)
             │
-            ├─ Encounter NPC (Input: E)
+            ├─ Encounter NPC (Input: Enter)
             │
             ├─► [DIALOG]
             │    ├─ Show text (typewriter)
@@ -722,7 +855,13 @@ Optimization Techniques:
             │                   ├─ Dialog quest complete
             │                   │
             │                   ├─ If fishing_rod: [CAT FOLLOWING]
-            │                   │    └─ Cat state: FOLLOWING
+            │                   │    ├─ Cat state: FOLLOWING
+            │                   │    ├─ Press C when far → [CAT CALLING] → FOLLOWING
+            │                   │    ├─ Press E when near → mood/affection tăng
+            │                   │    └─ Press C when near → [CAT CARE MENU]
+            │                   │         ├─ ↑/↓ chọn cá
+            │                   │         ├─ Enter feed fish
+            │                   │         └─ C/Esc close
             │                   │
             │                   ├─ If seeds: random garden reward
             │                   │    └─ InventorySystem.addRandomGardenReward()
@@ -734,6 +873,13 @@ Optimization Techniques:
             │         ├─ Gameplay paused
             │         ├─ Show runtime reward inventory
             │         └─ I/Esc closes overlay
+            │
+            ├─ Press C near cat
+            │    └─► [CAT CARE OVERLAY]
+            │         ├─ Gameplay paused
+            │         ├─ Show mood / heart / cooldown
+            │         ├─ Show fish inventory for feeding
+            │         └─ C/Esc closes overlay
             │
             └─ Exit game
 ```
@@ -781,9 +927,10 @@ src/main/java/com/game/
 │
 ├── inventory/
 │   └── InventorySystem.java
-│       ├─ Runtime-only garden reward inventory
-│       ├─ Random reward pool (rose, sunflower, tulip, bonsai)
-│       └─ Item quantities for inventory overlay
+│       ├─ Runtime-only inventory cho reward cây/hoa và cá
+│       ├─ Random reward pool (rose, sunflower, tulip, bonsai, fish)
+│       ├─ Item quantities for inventory overlay
+│       └─ Consume fish items khi cho mèo ăn
 │
 ├── entity/
 │   ├── Entity.java (abstract)
@@ -808,9 +955,11 @@ src/main/java/com/game/
 │   │   └─ Sparkle animation
 │   │
 │   └── CatFollower.java
-│       ├─ State (IDLE, FOLLOWING)
+│       ├─ State (IDLE, FOLLOWING, CALLING)
+│       ├─ Mood, affection, heart level
 │       ├─ Position history queue
-│       └─ Trailing behavior
+│       ├─ Cooldown pet/feed/call
+│       └─ Trailing + call behavior
 │
 ├── util/
 │   ├── AssetManager.java
@@ -827,7 +976,8 @@ src/main/java/com/game/
     │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
     │   ├─ update(dt, inputHandler)
     │   ├─ render(gc)
-    │   └─ renderInventoryOverlay(gc)
+   │   ├─ renderInventoryOverlay(gc)
+   │   └─ renderCatCareOverlay(gc)
     │
     ├── Tile.java (enum)
     │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
@@ -914,6 +1064,8 @@ Thắng:
     ├─ Nếu currentValue >= 100 trong vòng 7 giây
     ├─ InventorySystem.addRandomFishReward()
     ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
+   ├─ Cá được lưu trong inventory runtime
+   ├─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
     └─ PlayerState: FISHING → NORMAL
 
 Thua:
@@ -930,10 +1082,11 @@ Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo i
 - **Engine**: Java 17 + JavaFX 21 Canvas 2D
 - **FPS**: 60 frames per second (60 Hz)
 - **World**: Procedural tile-based map (40x30 tiles)
-- **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion → Fishing mini-game (cat follows only after fishing quest; garden/fish rewards go to inventory)
-- **Input**: WASD movement, E interaction, F fishing, I inventory, M map, Arrow keys for menus
-- **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay)
-- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay/Cat following/Fishing
+- **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion → Fishing mini-game → Cat Care (cat follows only after fishing quest; garden/fish rewards đi vào inventory; cá có thể dùng để tăng thân thiết với mèo)
+- **Input**: WASD movement, Enter NPC interaction, E pet cat, C call/care cat, F fishing, I inventory, M map, Arrow keys for menus
+- **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay → Cat Care overlay)
+- **Cat Prompt UI**: Khi đứng gần mèo, game hiển thị badge `E` và `C` trên đầu mèo theo cùng phong cách với badge `F`; mood chỉ hiển thị trong Cat Care overlay, không hiển thị trực tiếp trên mèo.
+- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat following / Fishing
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ.

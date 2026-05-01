@@ -85,12 +85,56 @@ public class InventorySystem {
         return items;
     }
 
+    public List<InventoryItem> getFishItems() {
+        List<InventoryItem> fishItems = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : itemCounts.entrySet()) {
+            if (!isFishItem(entry.getKey())) {
+                continue;
+            }
+            RewardDefinition reward = findReward(entry.getKey());
+            fishItems.add(toInventoryItem(reward, entry.getValue()));
+        }
+        return fishItems;
+    }
+
+    public boolean hasFishItems() {
+        for (String itemId : itemCounts.keySet()) {
+            if (isFishItem(itemId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean consumeItem(String itemId) {
+        Integer count = itemCounts.get(itemId);
+        if (count == null || count <= 0) {
+            return false;
+        }
+
+        if (count == 1) {
+            itemCounts.remove(itemId);
+        } else {
+            itemCounts.put(itemId, count - 1);
+        }
+        return true;
+    }
+
     public String getDisplayName(String itemId) {
         return findReward(itemId).displayName();
     }
 
     public String getIconKey(String itemId) {
         return findReward(itemId).iconKey();
+    }
+
+    public boolean isFishItem(String itemId) {
+        for (RewardDefinition reward : FISH_REWARDS) {
+            if (reward.id().equals(itemId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private RewardDefinition findReward(String itemId) {

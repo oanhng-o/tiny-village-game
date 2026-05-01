@@ -3,6 +3,7 @@ package com.game.dialog;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -75,6 +76,37 @@ public class QuestSystem {
      */
     public Map<String, QuestState> getQuestStates() {
         return Collections.unmodifiableMap(questStates);
+    }
+
+    public Map<String, QuestState> getQuestStatesSnapshot() {
+        return new LinkedHashMap<>(questStates);
+    }
+
+    public Set<String> getCollectedItemsSnapshot() {
+        return new LinkedHashSet<>(collectedItems);
+    }
+
+    public void replaceQuestStates(Map<String, QuestState> states) {
+        Set<String> registeredQuestIds = new LinkedHashSet<>(questStates.keySet());
+        for (String questId : registeredQuestIds) {
+            questStates.put(questId, QuestState.NOT_STARTED);
+        }
+
+        if (states == null) {
+            return;
+        }
+
+        for (Map.Entry<String, QuestState> entry : states.entrySet()) {
+            QuestState state = entry.getValue() == null ? QuestState.NOT_STARTED : entry.getValue();
+            questStates.put(entry.getKey(), state);
+        }
+    }
+
+    public void replaceCollectedItems(Set<String> itemIds) {
+        collectedItems.clear();
+        if (itemIds != null) {
+            collectedItems.addAll(itemIds);
+        }
     }
 
     /**

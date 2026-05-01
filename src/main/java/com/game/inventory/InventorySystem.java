@@ -120,6 +120,24 @@ public class InventorySystem {
         return true;
     }
 
+    public Map<String, Integer> getItemCountsSnapshot() {
+        return new LinkedHashMap<>(itemCounts);
+    }
+
+    public void replaceItemCounts(Map<String, Integer> counts) {
+        itemCounts.clear();
+        if (counts == null) {
+            return;
+        }
+
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            Integer count = entry.getValue();
+            if (count != null && count > 0) {
+                itemCounts.put(entry.getKey(), count);
+            }
+        }
+    }
+
     public String getDisplayName(String itemId) {
         return findReward(itemId).displayName();
     }

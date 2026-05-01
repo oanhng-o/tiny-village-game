@@ -64,4 +64,10 @@ public class InputHandler {
         justPressedKeys.addAll(justPressedBuffer);
         justPressedBuffer.clear();
     }
+
+    public void reset() {
+        pressedKeys.clear();
+        justPressedKeys.clear();
+        justPressedBuffer.clear();
+    }
 }

@@ -24,9 +24,61 @@ Tiny Village là một game 2D pixel art được phát triển bằng **Java 17
 ┌─────────────────────────────────────────────┐
 │  GameApplication.start(Stage)               │
 │  - Tạo Canvas 800x600 px                    │
-│  - Hiển thị Character Selection Screen      │
-│  - Setup InputHandler + GameLoop            │
+│  - Khởi tạo InputHandler + SaveSystem       │
+│  - Hiển thị Character Selection             │
+│  - Chọn Girl / Boy                          │
+│  - Sau đó mới hiện Continue / New Game      │
 └─────────────────────────────────────────────┘
+```
+
+### Startup Branch
+
+```
+Character Selection Screen
+   │
+   └─ Chọn Girl / Boy
+      └─ Continue / New Game Screen
+         ├─ Continue -> tải slot save của giới tính đã chọn
+         └─ New Game -> tạo phiên mới cho giới tính đã chọn
+```
+
+### Save Slots
+
+```
+%USERPROFILE%/.tiny-village-game/
+   ├─ save-girl.properties
+   └─ save-boy.properties
+```
+
+Mỗi giới tính có một slot save riêng. Continue sẽ tải slot của nhân vật đã chọn trước đó, còn auto-save khi thoát sẽ ghi đè slot đúng với giới tính của world hiện tại.
+
+---
+
+## 1a. Continue / New Game Screen
+
+### Giao Diện
+- Background và title cùng style với màn hình chọn nhân vật.
+- Menu nhỏ ở giữa màn hình gồm 2 lựa chọn: `Continue` và `New Game`.
+- Subtitle hiển thị giới tính vừa chọn để người chơi biết mình đang thao tác với slot nào.
+- Dòng trạng thái phía dưới hiển thị nhanh slot của giới tính đó đang có save hay chưa.
+
+### Điều Khiển
+```
+↑ / ↓ hoặc W / S    : Chuyển giữa Continue và New Game
+Enter / Space       : Xác nhận lựa chọn
+Esc                 : Quay lại Character Selection
+```
+
+### Quy Trình
+```
+Continue / New Game Screen
+    │
+    ├─ Continue
+   │  ├─ Nếu giới tính đã chọn chưa có save: báo lỗi và ở lại màn hình này
+   │  └─ Nếu có save: load slot của Girl/Boy đã chọn rồi vào gameplay
+    │
+    └─ New Game
+      └─ Khởi tạo phiên mới theo giới tính đã chọn rồi vào gameplay
 ```
 
 ---
@@ -45,7 +97,7 @@ Tiny Village là một game 2D pixel art được phát triển bằng **Java 17
 ### Điều Khiển
 ```
 ← / → Arrow Keys    : Chuyển giữa Girl/Boy
-Enter / Space       : Xác nhận lựa chọn
+Enter / Space       : Xác nhận nhân vật và sang màn hình Continue / New Game
 ```
 
 ### Quy Trình
@@ -56,11 +108,12 @@ Character Selection Screen
         │  └─ Cập nhật selectedOption (0 hoặc 1)
         │  └─ Render card được chọn với hiệu ứng
         │
-        └─ Người chơi bấm Enter/Space
-           └─ characterSelected = true
-           └─ Khởi tạo Player với giới tính đã chọn
-           └─ Chuyển sang Game Loop
+   └─ Người chơi bấm Enter/Space
+      └─ Chuyển sang Continue / New Game Screen
+      └─ Giữ lại giới tính đã chọn để quyết định slot save tương ứng
 ```
+
+Character Selection luôn xuất hiện trước để người chơi chốt giới tính, rồi mới quyết định `Continue` hay `New Game` cho đúng slot save.
 
 ---
 
@@ -157,6 +210,52 @@ Khi Character Selection hoàn tất:
 
 ---
 
+## 4a. Save Slots & Auto Save
+
+### Dữ Liệu Được Lưu
+- Giới tính nhân vật đã chọn
+- Vị trí player
+- Hướng nhìn hiện tại của player
+- Quest state theo `questId`
+- Danh sách quest item đã nhặt
+- Inventory runtime (hoa/cây/cá và quantity)
+- Cat state dài hạn: unlocked, vị trí, mood, affection, state
+
+### Dữ Liệu Không Lưu
+- Dialog đang mở dở
+- Fishing mini-game đang diễn ra
+- Inventory overlay / Cat Care overlay / minimap đang mở
+- Notification tạm thời
+- Cooldown pet/feed/call đang đếm
+
+Load luôn khôi phục tiến trình dài hạn và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
+
+### Continue / New Game Flow
+```
+Character Selection
+   └─ Continue / New Game Screen
+      ├─ Continue
+      │  └─ SaveSystem.load(selectedGender)
+      │  └─ Dựng GameWorld mới theo giới tính đã chọn
+      │  └─ Apply snapshot save vào world mới
+      │
+      └─ New Game
+         └─ Tạo GameWorld mới trống theo giới tính đã chọn
+```
+
+### Auto Save / Continue Flow
+```
+Khi mở game:
+   └─ Luôn vào Character Selection
+      └─ Continue / New Game Screen -> load hoặc tạo world theo giới tính đã chọn
+
+Khi đóng game:
+   └─ Application.stop()
+      └─ Nếu đang có GameWorld -> tự động save snapshot hiện tại vào slot Girl/Boy đúng với world đang chơi
+```
+
+---
+
 ## 5. Player Movement & Interaction
 
 ### Điều Khiển
@@ -171,7 +270,7 @@ C                      : Gọi mèo / mở menu chăm mèo
 F                      : Câu cá khi đứng gần nước
 M                      : Mở / đóng bản đồ nhỏ
 I                      : Mở / đóng kho lưu trữ
-Esc                    : Đóng kho lưu trữ hoặc Cat Care menu
+Esc                    : Đóng kho lưu trữ hoặc Cat Care menu đang mở
 ```
 
 ### Quy Trình Chuyển Động
@@ -409,6 +508,7 @@ Khi inventory overlay đang mở:
 - Không tương tác NPC
 - Không nhặt item
 - Không mở Cat Care
+- Esc sẽ đóng inventory ngay trong frame đó
 - World vẫn render phía sau overlay
 
 ---
@@ -670,11 +770,14 @@ Player.update():
 ```
 1. [STARTUP]
    Start game → Main.java → GameApplication.start()
+   - Hiện Character Selection
 
 2. [CHARACTER SELECTION]
-   Show selection screen (Girl/Boy)
-   User: Press → to Boy, Press Enter
-   → characterSelected = true
+   User: Chọn Girl hoặc Boy trước
+
+3. [CONTINUE / NEW GAME SCREEN]
+   - Nếu chọn Continue: Load slot save của giới tính vừa chọn
+   - Nếu chọn New Game: Bắt đầu game mới với giới tính vừa chọn
 
 3. [INIT]
    Create GameWorld:
@@ -747,9 +850,14 @@ Player.update():
    - Heart level tăng dần theo affection runtime
    - Continue playing until close game
 
-11. [END]
-   User closes window → Game ends
-   Next launch creates a new empty inventory
+11. [SAVE / LOAD]
+   - Close game → app tự động save lại lần cuối vào đúng slot giới tính
+   - Mở lại game → Character Selection → Continue / New Game Screen → chọn Continue để load slot tương ứng
+
+12. [END]
+   User closes window → Application.stop()
+   → Auto save nếu đang có phiên gameplay
+   → Game ends
 ```
 
 ---
@@ -777,6 +885,11 @@ Main.java
         │   ├─ QuestSystem
       │   ├─ InventorySystem (runtime rewards + fish)
       │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
+            │
+            ├─► SaveSystem
+            │   ├─ Properties files `save-girl.properties` / `save-boy.properties`
+            │   ├─ save(snapshot)
+            │   └─ load(isGirl) -> SaveData
         │
         ├─► InputHandler (Input tracking)
         │   ├─ keyPressed
@@ -830,12 +943,16 @@ Optimization Techniques:
 ```
 [CHARACTER SELECT]
        │
-       ├─ Girl selected
-       │
-       └─► [GAMEPLAY]
+     └─ Enter
+        └─► [CONTINUE / NEW GAME]
+           ├─ Continue -> load selected gender slot -> [GAMEPLAY]
+           ├─ New Game -> create new selected gender world -> [GAMEPLAY]
+           └─ Esc -> [CHARACTER SELECT]
+
+     [GAMEPLAY]
             │
             ├─ Player moves (Input: WASD)
-            │
+         │
             ├─ Encounter NPC (Input: Enter)
             │
             ├─► [DIALOG]
@@ -880,7 +997,8 @@ Optimization Techniques:
             │         ├─ Show fish inventory for feeding
             │         └─ C/Esc closes overlay
             │
-            └─ Exit game
+              └─ Exit game
+                 └─ auto save current gender slot
 ```
 
 ---
@@ -930,6 +1048,14 @@ src/main/java/com/game/
 │       ├─ Random reward pool (rose, sunflower, tulip, bonsai, fish)
 │       ├─ Item quantities for inventory overlay
 │       └─ Consume fish items khi cho mèo ăn
+│
+├── save/
+│   ├── SaveData.java
+│   │   └─ Snapshot immutable cho long-lived progress
+│   └── SaveSystem.java
+│       ├─ Single-slot save bằng java.util.Properties
+│       ├─ Đường dẫn `%USERPROFILE%/.tiny-village-game/save.properties`
+│       └─ Parse / normalize dữ liệu save khi load
 │
 ├── entity/
 │   ├── Entity.java (abstract)
@@ -1084,7 +1210,7 @@ Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo i
 - **Input**: WASD movement, Enter NPC interaction, E pet cat, C call/care cat, F fishing, I inventory, M map, Arrow keys for menus
 - **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay → Cat Care overlay)
 - **Cat Prompt UI**: Khi đứng gần mèo, game hiển thị badge `E` và `C` trên đầu mèo theo cùng phong cách với badge `F`; mood chỉ hiển thị trong Cat Care overlay, không hiển thị trực tiếp trên mèo.
-- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat calling / Fishing
+- **State Management**: Character select → Continue/New Game screen → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat calling / Fishing → Auto-save on exit vào slot giới tính tương ứng
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ.

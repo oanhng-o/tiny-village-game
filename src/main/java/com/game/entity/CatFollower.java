@@ -298,6 +298,32 @@ public class CatFollower extends Entity {
         return callCooldownRemaining;
     }
 
+    public void restoreProgressState(Player player, boolean careUnlocked, double x, double y, State state,
+                                     int mood, int affectionPoints) {
+        this.x = x;
+        this.y = y;
+        this.targetPlayer = careUnlocked ? player : null;
+        this.state = careUnlocked ? normalizeState(state) : State.IDLE;
+        this.mood = careUnlocked ? Math.max(0, Math.min(MAX_MOOD, mood)) : 0;
+        this.affectionPoints = careUnlocked ? Math.max(0, affectionPoints) : 0;
+        this.petCooldownRemaining = 0;
+        this.feedCooldownRemaining = 0;
+        this.callCooldownRemaining = 0;
+        this.interactionEffectRemaining = 0;
+        this.isWalking = false;
+        this.animFrame = 0;
+        this.animTimer = 0;
+        this.idleTimer = 0;
+        updateSprite();
+    }
+
+    private State normalizeState(State state) {
+        if (state == null || state == State.CALLING) {
+            return State.WAITING;
+        }
+        return state;
+    }
+
     // Getters
     public State getState() { return state; }
 }

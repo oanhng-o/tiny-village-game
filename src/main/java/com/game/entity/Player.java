@@ -206,6 +206,27 @@ public class Player extends Entity {
         return posHistoryY[idx];
     }
 
+    public void restoreProgressState(double x, double y, int direction) {
+        this.x = x;
+        this.y = y;
+        this.direction = Math.max(0, Math.min(3, direction));
+        this.state = PlayerState.NORMAL;
+        this.moving = false;
+        this.currentFrame = 0;
+        this.frameTimer = 0;
+        resetPositionHistory();
+        updateSprite();
+    }
+
+    private void resetPositionHistory() {
+        for (int i = 0; i < posHistoryX.length; i++) {
+            posHistoryX[i] = x;
+            posHistoryY[i] = y;
+        }
+        posHistoryIndex = 0;
+        posHistoryTimer = 0;
+    }
+
     public boolean hasFishingRod() { return hasFishingRod; }
     public void setHasFishingRod(boolean has) { this.hasFishingRod = has; }
     public PlayerState getState() { return state; }

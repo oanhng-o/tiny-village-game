@@ -7,6 +7,7 @@ import com.game.dialog.DialogSystem;
 import com.game.dialog.QuestSystem;
 import com.game.entity.*;
 import com.game.inventory.InventorySystem;
+import com.game.save.SaveData;
 import com.game.util.AssetManager;
 import com.game.util.Constants;
 
@@ -39,6 +40,7 @@ public class GameWorld {
     private InventorySystem inventorySystem;
     private MapOverlay mapOverlay;
     private FishingMiniGame fishingMiniGame;
+    private final boolean isGirl;
     private boolean inventoryOpen = false;
     private boolean catCareOpen = false;
     private int catCareSelection = 0;
@@ -48,6 +50,8 @@ public class GameWorld {
     private double pickupTimer = 0;
 
     public GameWorld(boolean isGirl) {
+        this.isGirl = isGirl;
+
         // Load assets
         AssetManager.getInstance().loadAll(isGirl);
 
@@ -498,6 +502,59 @@ public class GameWorld {
         gc.fillText(controlsText, 10, Constants.WINDOW_HEIGHT - 10);
     }
 
+    public SaveData captureSaveData() {
+        return new SaveData(
+                isGirl,
+                player.getX(),
+                player.getY(),
+                player.getDirection(),
+                questSystem.getQuestStatesSnapshot(),
+                questSystem.getCollectedItemsSnapshot(),
+                inventorySystem.getItemCountsSnapshot(),
+                cat.isCareUnlocked(),
+                cat.getX(),
+                cat.getY(),
+                cat.getState() == CatFollower.State.CALLING ? CatFollower.State.WAITING : cat.getState(),
+                cat.getMood(),
+                cat.getAffectionPoints());
+    }
+
+    public void applySaveData(SaveData saveData) {
+        questSystem.replaceQuestStates(saveData.questStates());
+        questSystem.replaceCollectedItems(saveData.collectedQuestItems());
+        inventorySystem.replaceItemCounts(saveData.inventoryItems());
+
+        player.restoreProgressState(saveData.playerX(), saveData.playerY(), saveData.playerDirection());
+        player.setHasFishingRod(questSystem.hasItem(QuestSystem.FISHING_ROD_QUEST_ID)
+                || questSystem.isQuestCompleted(QuestSystem.FISHING_ROD_QUEST_ID));
+
+        boolean catUnlocked = saveData.catUnlocked() || questSystem.isQuestCompleted(QuestSystem.FISHING_ROD_QUEST_ID);
+        int catMood = saveData.catUnlocked() ? saveData.catMood() : (catUnlocked ? 60 : 0);
+        int catAffection = saveData.catUnlocked() ? saveData.catAffection() : 0;
+        cat.restoreProgressState(player, catUnlocked, saveData.catX(), saveData.catY(), saveData.catState(), catMood, catAffection);
+
+        syncQuestItemsFromProgress();
+
+        player.setState(Player.PlayerState.NORMAL);
+        inventoryOpen = false;
+        catCareOpen = false;
+        catCareSelection = 0;
+        pickupNotification = null;
+        pickupTimer = 0;
+        mapOverlay.setVisible(false);
+        camera.snapTo(player.getCenterX(), player.getCenterY());
+    }
+
+    private void syncQuestItemsFromProgress() {
+        for (Item item : items) {
+            boolean collected = questSystem.hasItem(item.getItemId());
+            item.setCollected(collected);
+            boolean shouldBeVisible = !collected
+                    && questSystem.getQuestState(item.getItemId()) == QuestSystem.QuestState.ACTIVE;
+            item.setVisible(shouldBeVisible);
+        }
+    }
+
     private void renderCatInteractionHint(GraphicsContext gc, double camX, double camY) {
         if (!cat.isCareUnlocked() || inventoryOpen || catCareOpen || dialogSystem.isActive() || fishingMiniGame.isActive()) {
             return;
@@ -797,6 +854,7 @@ public class GameWorld {
     }
 
     // Getters for MapOverlay
+    public boolean isGirl() { return isGirl; }
     public TileMap getTileMap() { return tileMap; }
     public Player getPlayer() { return player; }
     public List<NPC> getNPCs() { return npcs; }

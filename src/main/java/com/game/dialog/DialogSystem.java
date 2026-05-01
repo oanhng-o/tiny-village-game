@@ -341,18 +341,22 @@ public class DialogSystem {
         for (Map.Entry<String, QuestSystem.QuestState> entry : questSystem.getQuestStates().entrySet()) {
             String questId = entry.getKey();
             QuestSystem.QuestState qs = entry.getValue();
-            if (qs == QuestSystem.QuestState.NOT_STARTED) {
-                continue;
-            }
 
             String status;
             Color questColor;
-            if (qs == QuestSystem.QuestState.ACTIVE) {
+            Color borderColor;
+            if (qs == QuestSystem.QuestState.NOT_STARTED) {
+                status = "Chưa nhận";
+                questColor = Color.web("#6D4C41");
+                borderColor = Color.web("#D7CCC8");
+            } else if (qs == QuestSystem.QuestState.ACTIVE) {
                 status = questSystem.hasItem(questId) ? "✓ Đã tìm thấy!" : "Đang tìm...";
                 questColor = Color.web("#5D4037"); // Dark brown
+                borderColor = Color.web("#A8E6CF");
             } else {
                 status = "✓ Hoàn thành!";
                 questColor = Color.web("#2E7D32"); // Dark green
+                borderColor = Color.web("#A8E6CF");
             }
 
             String questText = getQuestLabel(questId) + ": " + status;
@@ -362,7 +366,7 @@ public class DialogSystem {
 
             gc.setFill(Color.web("#FFF8DC", 0.9));
             gc.fillRoundRect(qx, qy, qw, 35, 15, 15);
-            gc.setStroke(Color.web("#A8E6CF")); // Pastel green
+            gc.setStroke(borderColor);
             gc.setLineWidth(3);
             gc.strokeRoundRect(qx, qy, qw, 35, 15, 15);
 

@@ -374,6 +374,7 @@ Player đã hoàn thành quest `fishing_rod`
 - `seeds`: quest tìm hạt giống cho bác làm vườn.
 
 Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item pickup được lưu bằng `QuestSystem.addItem(itemId)`.
+Riêng quest `fishing_rod` là quest một lần: sau khi chuyển sang `COMPLETED`, quest đóng hẳn và NPC không thể kích hoạt lại quest này nữa.
 
 ### Quest: "Tìm cần câu cho bạn nhỏ" (`fishing_rod`)
 
@@ -393,6 +394,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - Nói chuyện lần 2
 - Dialog: "Cảm ơn! 🎣"
 - QuestSystem.completeQuest("fishing_rod") → COMPLETED
+- Quest đóng lại vĩnh viễn, không quay về `NOT_STARTED` hay `ACTIVE`
 
 **Kết Quả:**
 - CatFollower: IDLE → WAITING
@@ -400,6 +402,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - Cat Care được mở khóa với mood ban đầu `60/100`
 - Heart level ban đầu là `1`, suy ra từ affection runtime
 - Player có thể dùng `C` để gọi mèo lại gần / mở Cat Care và `E` để vuốt mèo khi đã ở gần
+- Những lần nói chuyện sau đó với NPC chỉ còn dialog hậu quest, không nhận lại quest `fishing_rod`
 - Có thể tiếp tục explore hoặc nói chuyện NPC khác
 
 ### Quest: "Tìm hạt giống cho bác làm vườn" (`seeds`)
@@ -811,6 +814,7 @@ Player.update():
    Player returns to "Bạn nhỏ"
    - Dialog: "Cảm ơn! 🎣"
    - QuestSystem.completeQuest("fishing_rod") → COMPLETED
+   - Quest `fishing_rod` đóng hẳn, không thể nhận hoặc làm lại
    - CatFollower state: IDLE → WAITING
    - Cat Care được mở khóa nhưng mèo chưa tự chạy theo Player
 
@@ -969,6 +973,7 @@ Optimization Techniques:
             │              │
             │              └─► [RETURN TO NPC]
             │                   ├─ Dialog quest complete
+            │                   ├─ Quest `fishing_rod` closed permanently
             │                   │
             │                   ├─ If fishing_rod: [CAT CARE UNLOCKED]
             │                   │    ├─ Cat state: WAITING

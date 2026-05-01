@@ -93,9 +93,9 @@ public class GameWorld {
 
         dialogSystem.setOnQuestComplete((questId) -> {
             if (QuestSystem.FISHING_ROD_QUEST_ID.equals(questId)) {
-                // Cat starts following player after the main fishing quest.
-                cat.startFollowing(player);
-                showPickupNotification("🐱 Mèo con bắt đầu đi theo bạn! Nhấn C để gọi hoặc chăm sóc.");
+                // Unlock cat care, but only bring the cat close when the player explicitly calls it.
+                cat.unlockCare(player);
+                showPickupNotification("🐱 Mèo con đã thân với bạn hơn! Nhấn C để gọi mèo lại gần.");
             } else if (QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
                 InventorySystem.InventoryItem reward = inventorySystem.addRandomGardenReward();
                 showPickupNotification("🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "!");

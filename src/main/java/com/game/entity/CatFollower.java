@@ -12,6 +12,8 @@ import javafx.scene.paint.Color;
  */
 public class CatFollower extends Entity {
 
+    private static final double SUMMONED_STOP_DISTANCE = 14.0;
+
     private static final double FOLLOW_DISTANCE = 40.0;
     private static final double FOLLOW_SPEED = 100.0;
     private static final double CALL_SPEED = 170.0;
@@ -31,7 +33,7 @@ public class CatFollower extends Entity {
     private static final double INTERACTION_EFFECT_DURATION = 1.2;
 
     public enum State {
-        IDLE, FOLLOWING, CALLING
+        IDLE, WAITING, CALLING
     }
 
     private State state = State.IDLE;
@@ -121,7 +123,7 @@ public class CatFollower extends Entity {
     }
 
     private void updateMovement(double dt) {
-        if (targetPlayer == null || state == State.IDLE) {
+        if (targetPlayer == null || state == State.IDLE || state == State.WAITING) {
             isWalking = false;
             return;
         }
@@ -129,16 +131,12 @@ public class CatFollower extends Entity {
         if (state == State.CALLING) {
             double anchorX = targetPlayer.getX() - width * 0.75;
             double anchorY = targetPlayer.getY() + targetPlayer.getHeight() * 0.25;
-            boolean arrived = moveToward(anchorX, anchorY, CALL_SPEED, dt, 10.0);
+            boolean arrived = moveToward(anchorX, anchorY, CALL_SPEED, dt, SUMMONED_STOP_DISTANCE);
             if (arrived) {
-                state = State.FOLLOWING;
+                state = State.WAITING;
             }
             return;
         }
-
-        double targetX = targetPlayer.getHistoryX(30);
-        double targetY = targetPlayer.getHistoryY(30);
-        moveToward(targetX, targetY, FOLLOW_SPEED, dt, FOLLOW_DISTANCE);
     }
 
     private boolean moveToward(double targetX, double targetY, double speed, double dt, double stopDistance) {
@@ -170,11 +168,11 @@ public class CatFollower extends Entity {
     }
 
     /**
-     * Bắt đầu follow player.
+     * Mở khóa tương tác với mèo sau quest, nhưng chưa tự gọi mèo lại gần.
      */
-    public void startFollowing(Player player) {
+    public void unlockCare(Player player) {
         boolean wasLocked = !isCareUnlocked();
-        this.state = State.FOLLOWING;
+        this.state = State.WAITING;
         this.targetPlayer = player;
         if (wasLocked) {
             this.mood = UNLOCK_MOOD;

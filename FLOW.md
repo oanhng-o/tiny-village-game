@@ -211,8 +211,8 @@ Player gần NPC (trong interactionRadius)
 Player đã hoàn thành quest `fishing_rod`
    │
    ├─ Bấm C khi mèo ở xa
-   │  └─ CatFollower: FOLLOWING → CALLING
-   │  └─ Mèo chạy nhanh về gần Player, sau đó quay lại FOLLOWING
+   │  └─ CatFollower: WAITING → CALLING
+   │  └─ Mèo chạy nhanh về gần Player, sau đó quay lại WAITING ở cạnh Player
    │
    ├─ Bấm E khi mèo ở gần
    │  └─ Nếu pet cooldown = 0:
@@ -296,11 +296,11 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - QuestSystem.completeQuest("fishing_rod") → COMPLETED
 
 **Kết Quả:**
-- CatFollower: IDLE → FOLLOWING
-- Mèo bắt đầu theo sát Player
+- CatFollower: IDLE → WAITING
+- Mèo được mở khóa tương tác nhưng vẫn đứng tại chỗ cho tới khi Player bấm `C`
 - Cat Care được mở khóa với mood ban đầu `60/100`
 - Heart level ban đầu là `1`, suy ra từ affection runtime
-- Player có thể dùng `C` để gọi / chăm mèo và `E` để vuốt mèo
+- Player có thể dùng `C` để gọi mèo lại gần / mở Cat Care và `E` để vuốt mèo khi đã ở gần
 - Có thể tiếp tục explore hoặc nói chuyện NPC khác
 
 ### Quest: "Tìm hạt giống cho bác làm vườn" (`seeds`)
@@ -325,7 +325,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
 - Thêm reward vào InventorySystem runtime
 - Hiện notification tên phần thưởng nhận được
-- Không kích hoạt CatFollower; mèo chỉ follow sau quest `fishing_rod`
+- Không kích hoạt CatFollower; quest `fishing_rod` chỉ mở khóa việc gọi và chăm mèo
 
 ---
 
@@ -424,12 +424,10 @@ Khi inventory overlay đang mở:
 - Không tương tác được
 ```
 
-**FOLLOWING (Quest COMPLETED)**
+**WAITING (Quest COMPLETED)**
 ```
-- Theo sát Player ở phía sau
-- Cách Player: ~40-60 pixels
-- Sử dụng position history queue cho smooth trailing
-- Walk animation giống Player
+- Đã mở khóa tương tác sau quest `fishing_rod`
+- Đứng yên tại vị trí hiện tại cho tới khi Player chủ động gọi bằng `C`
 - Khi Player lại gần: hiển thị 2 badge phím `E` và `C` trên đầu mèo
    theo cùng style với badge `F` khi đứng gần WATER
 ```
@@ -438,7 +436,7 @@ Khi inventory overlay đang mở:
 ```
 - Chỉ hoạt động sau khi quest `fishing_rod` đã COMPLETED
 - Mèo tăng tốc chạy về gần Player
-- Khi vào phạm vi gần: CALLING → FOLLOWING
+- Khi vào phạm vi gần: CALLING → WAITING
 - Có call cooldown 2 giây để tránh spam
 ```
 
@@ -470,25 +468,25 @@ Heart level:
 - Call cooldown: 2 giây sau mỗi lần gọi mèo bằng C
 ```
 
-### Quy Trình Following
+### Quy Trình Gọi Mèo
 ```
 CatFollower.update(dt, player)
     │
     ├─ Nếu state = IDLE: Bỏ qua
     │
-    └─ Nếu state = FOLLOWING:
+   ├─ Nếu state = WAITING:
+   │  └─ Giữ vị trí hiện tại, chờ Player bấm `C`
+   │
+   └─ Nếu state = CALLING:
        │
-       ├─ Lấy target position từ player history
-       │ (position từ vài frame trước)
+      ├─ Lấy vị trí neo cạnh Player
+      ├─ Tính direction → target
        │
-       ├─ Tính direction → target
-       │
-       ├─ Di chuyển với speed ~80-100 px/s
+      ├─ Di chuyển nhanh về gần Player
        │
        ├─ Cập nhật animation frame
        │
-       └─ Render sprite tại vị trí mới
-           (luôn ở phía sau Player)
+      └─ Khi đủ gần: state quay lại WAITING
 ```
 
    ### Quy Trình Cho Ăn
@@ -710,8 +708,8 @@ Player.update():
    Player returns to "Bạn nhỏ"
    - Dialog: "Cảm ơn! 🎣"
    - QuestSystem.completeQuest("fishing_rod") → COMPLETED
-   - CatFollower state: IDLE → FOLLOWING
-   - Cat starts trailing Player
+   - CatFollower state: IDLE → WAITING
+   - Cat Care được mở khóa nhưng mèo chưa tự chạy theo Player
 
 7. [GARDENER SIDE QUEST]
    Player visits "Bác làm vườn" at tile (5,25)
@@ -736,12 +734,13 @@ Player.update():
    - Reward cây/hoa/cá xuất hiện với icon, tên, quantity
    - User presses I or Esc to close
 
-10. [CAT FOLLOWING & CARE]
+10. [CAT CALL & CARE]
    Player explores with cat:
-   - Cat follows at ~50px distance
+   - Cat đứng tại vị trí hiện tại cho tới khi được gọi
    - Khi lại gần mèo, hiện 2 badge `E` và `C` trên đầu mèo
      giống kiểu badge `F` của fishing prompt
    - Bấm C khi mèo ở xa → mèo chạy lại gần Player
+   - Khi Player đi xa trở lại, phải bấm C lần nữa nếu muốn mèo quay lại gần
    - Bấm E khi mèo ở gần → mood +5, affection +2
    - Bấm C khi mèo ở gần → mở Cat Care menu
    - Chọn 1 con cá và bấm Enter → mèo ăn, mood +15, affection +8
@@ -854,9 +853,9 @@ Optimization Techniques:
             │              └─► [RETURN TO NPC]
             │                   ├─ Dialog quest complete
             │                   │
-            │                   ├─ If fishing_rod: [CAT FOLLOWING]
-            │                   │    ├─ Cat state: FOLLOWING
-            │                   │    ├─ Press C when far → [CAT CALLING] → FOLLOWING
+            │                   ├─ If fishing_rod: [CAT CARE UNLOCKED]
+            │                   │    ├─ Cat state: WAITING
+            │                   │    ├─ Press C when far → [CAT CALLING] → WAITING
             │                   │    ├─ Press E when near → mood/affection tăng
             │                   │    └─ Press C when near → [CAT CARE MENU]
             │                   │         ├─ ↑/↓ chọn cá
@@ -955,11 +954,10 @@ src/main/java/com/game/
 │   │   └─ Sparkle animation
 │   │
 │   └── CatFollower.java
-│       ├─ State (IDLE, FOLLOWING, CALLING)
+│       ├─ State (IDLE, WAITING, CALLING)
 │       ├─ Mood, affection, heart level
-│       ├─ Position history queue
 │       ├─ Cooldown pet/feed/call
-│       └─ Trailing + call behavior
+│       └─ Unlock + call-near + care behavior
 │
 ├── util/
 │   ├── AssetManager.java
@@ -1082,11 +1080,11 @@ Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo i
 - **Engine**: Java 17 + JavaFX 21 Canvas 2D
 - **FPS**: 60 frames per second (60 Hz)
 - **World**: Procedural tile-based map (40x30 tiles)
-- **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion → Fishing mini-game → Cat Care (cat follows only after fishing quest; garden/fish rewards đi vào inventory; cá có thể dùng để tăng thân thiết với mèo)
+- **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion → Fishing mini-game → Cat Care (quest `fishing_rod` mở khóa mèo; nhấn `C` để gọi mèo lại gần; garden/fish rewards đi vào inventory; cá có thể dùng để tăng thân thiết với mèo)
 - **Input**: WASD movement, Enter NPC interaction, E pet cat, C call/care cat, F fishing, I inventory, M map, Arrow keys for menus
 - **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay → Cat Care overlay)
 - **Cat Prompt UI**: Khi đứng gần mèo, game hiển thị badge `E` và `C` trên đầu mèo theo cùng phong cách với badge `F`; mood chỉ hiển thị trong Cat Care overlay, không hiển thị trực tiếp trên mèo.
-- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat following / Fishing
+- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat calling / Fishing
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ.

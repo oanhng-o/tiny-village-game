@@ -62,10 +62,11 @@ public class GardenerQuestTest {
         NPC gardener = getGardenerNPC();
         player.setX(gardener.getX());
         player.setY(gardener.getY());
-        
-        simulateInteraction(5); // Nhấn Space 5 lần để nhận quest
 
-        assertEquals(QuestSystem.QuestState.ACTIVE, questSystem.getQuestState(QuestSystem.SEEDS_QUEST_ID), "Quest phải chuyển sang ACTIVE.");
+        simulateInteraction(10); // Nhấn Space 10 lần để nhận quest
+
+        assertEquals(QuestSystem.QuestState.ACTIVE, questSystem.getQuestState(QuestSystem.SEEDS_QUEST_ID),
+                "Quest phải chuyển sang ACTIVE.");
         assertTrue(getSeedsItem().isVisible(), "Hạt giống phải hiện sau khi nhận quest.");
     }
 
@@ -90,28 +91,26 @@ public class GardenerQuestTest {
         // Fast-forward: Đã có hạt giống
         questSystem.startQuest(QuestSystem.SEEDS_QUEST_ID);
         questSystem.addItem(QuestSystem.SEEDS_QUEST_ID);
-        
+
         NPC gardener = getGardenerNPC();
         player.setX(gardener.getX());
         player.setY(gardener.getY());
 
-        simulateInteraction(5); // Nhấn Space 5 lần để trả quest
+        simulateInteraction(10); // Nhấn Space 10 lần để trả quest
 
         assertEquals(QuestSystem.QuestState.COMPLETED, questSystem.getQuestState(QuestSystem.SEEDS_QUEST_ID), "Quest phải chuyển sang COMPLETED.");
         assertFalse(inventorySystem.isEmpty(), "Kho đồ phải nhận được quà tặng.");
-        
+
         InventorySystem.InventoryItem reward = inventorySystem.getItems().get(0);
-        assertTrue(List.of("rose", "sunflower", "tulip", "bonsai").contains(reward.getId()), 
+        assertTrue(List.of("rose", "sunflower", "tulip", "bonsai").contains(reward.getId()),
                 "Món quà phải thuộc danh mục sân vườn.");
     }
 
     private void simulateInteraction(int spacePresses) {
-        simulateKeyPress(KeyCode.ENTER); // Mở dialog
-        gameWorld.update(0.016, input);
-        
+        simulateKeyPress(KeyCode.ENTER, 0.016); // Mở dialog
+
         for (int i = 0; i < spacePresses; i++) {
-            simulateKeyPress(KeyCode.SPACE);
-            gameWorld.update(0.2, input);
+            simulateKeyPress(KeyCode.SPACE, 0.2);
         }
     }
 
@@ -135,9 +134,10 @@ public class GardenerQuestTest {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vật phẩm hạt giống"));
     }
 
-    private void simulateKeyPress(KeyCode code) {
+    private void simulateKeyPress(KeyCode code, double dt) {
         input.keyPressed(code);
         input.update();
+        gameWorld.update(dt, input);
         input.keyReleased(code);
         input.update();
     }

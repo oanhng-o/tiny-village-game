@@ -37,6 +37,7 @@ public class SaveSystem {
     private static final String KEY_CAT_MOOD = "cat.mood";
     private static final String KEY_CAT_AFFECTION = "cat.affection";
     private static final String PREFIX_QUEST = "quest.";
+    private static final String PREFIX_QUEST_TIMER = "questTimer.";
     private static final String PREFIX_COLLECTED_ITEM = "questItem.";
     private static final String PREFIX_INVENTORY = "inventory.";
     private static final int CURRENT_VERSION = 1;
@@ -82,6 +83,11 @@ public class SaveSystem {
         for (Map.Entry<String, QuestSystem.QuestState> entry : data.questStates().entrySet()) {
             properties.setProperty(PREFIX_QUEST + entry.getKey(), entry.getValue().name());
         }
+        for (Map.Entry<String, Double> entry : data.questTimers().entrySet()) {
+            if (entry.getValue() != null && entry.getValue() > 0) {
+                properties.setProperty(PREFIX_QUEST_TIMER + entry.getKey(), Double.toString(entry.getValue()));
+            }
+        }
         for (String itemId : data.collectedQuestItems()) {
             properties.setProperty(PREFIX_COLLECTED_ITEM + itemId, Boolean.TRUE.toString());
         }
@@ -119,6 +125,7 @@ public class SaveSystem {
         }
 
         Map<String, QuestSystem.QuestState> questStates = new LinkedHashMap<>();
+        Map<String, Double> questTimers = new LinkedHashMap<>();
         Set<String> collectedQuestItems = new LinkedHashSet<>();
         Map<String, Integer> inventoryItems = new LinkedHashMap<>();
 
@@ -127,6 +134,12 @@ public class SaveSystem {
             if (key.startsWith(PREFIX_QUEST)) {
                 String questId = key.substring(PREFIX_QUEST.length());
                 questStates.put(questId, parseQuestState(value));
+            } else if (key.startsWith(PREFIX_QUEST_TIMER)) {
+                String questId = key.substring(PREFIX_QUEST_TIMER.length());
+                double timer = parseDouble(value, 0);
+                if (timer > 0) {
+                    questTimers.put(questId, timer);
+                }
             } else if (key.startsWith(PREFIX_COLLECTED_ITEM) && Boolean.parseBoolean(value)) {
                 collectedQuestItems.add(key.substring(PREFIX_COLLECTED_ITEM.length()));
             } else if (key.startsWith(PREFIX_INVENTORY)) {
@@ -144,6 +157,7 @@ public class SaveSystem {
                 parseDouble(properties.getProperty(KEY_PLAYER_Y), 12 * 32.0),
                 parseInt(properties.getProperty(KEY_PLAYER_DIRECTION), 0),
                 questStates,
+                questTimers,
                 collectedQuestItems,
                 inventoryItems,
                 Boolean.parseBoolean(properties.getProperty(KEY_CAT_UNLOCKED, Boolean.FALSE.toString())),

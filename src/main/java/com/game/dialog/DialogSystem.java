@@ -334,7 +334,9 @@ public class DialogSystem {
     /**
      * Render quest indicator ở góc màn hình.
      */
-    public void renderQuestIndicator(GraphicsContext gc) {
+    public void renderQuestIndicator(GraphicsContext gc, Map<String, Double> questResetTimers,
+                                     double seedsQuestResetDelaySeconds,
+                                     double seedsQuestCompletionBannerSeconds) {
         gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 13));
 
         int visibleQuestIndex = 0;
@@ -354,9 +356,22 @@ public class DialogSystem {
                 questColor = Color.web("#5D4037"); // Dark brown
                 borderColor = Color.web("#A8E6CF");
             } else {
-                status = "✓ Hoàn thành!";
-                questColor = Color.web("#2E7D32"); // Dark green
-                borderColor = Color.web("#A8E6CF");
+                double resetTimer = questResetTimers == null
+                        ? 0
+                        : questResetTimers.getOrDefault(questId, 0.0);
+                double countdownThreshold = Math.max(0.0,
+                        seedsQuestResetDelaySeconds - seedsQuestCompletionBannerSeconds);
+                if (QuestSystem.SEEDS_QUEST_ID.equals(questId)
+                        && resetTimer > 0
+                        && resetTimer <= countdownThreshold) {
+                    status = "Mở lại sau " + formatQuestCountdown(resetTimer);
+                    questColor = Color.web("#8D6E63");
+                    borderColor = Color.web("#FFCC80");
+                } else {
+                    status = "✓ Hoàn thành!";
+                    questColor = Color.web("#2E7D32"); // Dark green
+                    borderColor = Color.web("#A8E6CF");
+                }
             }
 
             String questText = getQuestLabel(questId) + ": " + status;
@@ -382,6 +397,18 @@ public class DialogSystem {
             case QuestSystem.SEEDS_QUEST_ID -> "🌱 Tìm hạt giống";
             default -> "Nhiệm vụ " + questId;
         };
+    }
+
+    private String formatQuestCountdown(double remainingSeconds) {
+        int totalSeconds = (int) Math.ceil(Math.max(0.0, remainingSeconds));
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        }
+        return String.format("%02d:%02d", minutes, seconds);
     }
 
     public boolean isActive() { return state != State.INACTIVE; }

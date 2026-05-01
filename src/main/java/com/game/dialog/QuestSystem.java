@@ -51,10 +51,24 @@ public class QuestSystem {
     }
 
     /**
+     * Reset quest về trạng thái chưa bắt đầu.
+     */
+    public void resetQuest(String questId) {
+        questStates.put(questId, QuestState.NOT_STARTED);
+    }
+
+    /**
      * Đánh dấu đã nhặt item theo id.
      */
     public void addItem(String itemId) {
         collectedItems.add(itemId);
+    }
+
+    /**
+     * Xóa đánh dấu đã nhặt item theo id.
+     */
+    public void removeItem(String itemId) {
+        collectedItems.remove(itemId);
     }
 
     /**

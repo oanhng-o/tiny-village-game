@@ -217,6 +217,7 @@ Khi Character Selection hoàn tất:
 - Vị trí player
 - Hướng nhìn hiện tại của player
 - Quest state theo `questId`
+- Countdown mở lại của quest lặp `seeds`
 - Danh sách quest item đã nhặt
 - Inventory runtime (hoa/cây/cá và quantity)
 - Cat state dài hạn: unlocked, vị trí, mood, affection, state
@@ -375,6 +376,7 @@ Player đã hoàn thành quest `fishing_rod`
 
 Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item pickup được lưu bằng `QuestSystem.addItem(itemId)`.
 Riêng quest `fishing_rod` là quest một lần: sau khi chuyển sang `COMPLETED`, quest đóng hẳn và NPC không thể kích hoạt lại quest này nữa.
+Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ trạng thái thành công trong 10 giây đầu, sau đó đổi sang countdown mở lại quest cho tới khi tự reset về `NOT_STARTED`.
 
 ### Quest: "Tìm cần câu cho bạn nhỏ" (`fishing_rod`)
 
@@ -422,11 +424,15 @@ Riêng quest `fishing_rod` là quest một lần: sau khi chuyển sang `COMPLET
 - Quay lại "Bác làm vườn"
 - Dialog hiển thị lời cảm ơn trước
 - QuestSystem.completeQuest("seeds") → COMPLETED
+- Quest indicator hiển thị `✓ Hoàn thành!` trong 10 giây đầu
+- Sau 10 giây, cùng vị trí đó đổi sang countdown 3600 giây trước khi quest tự mở lại
 
 **Kết Quả:**
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
 - Thêm reward vào InventorySystem runtime
 - Hiện notification tên phần thưởng nhận được
+- Quest indicator đổi từ trạng thái thành công sang countdown mở lại sau 10 giây
+- Hết 3600 giây: quest reset về `NOT_STARTED`, item Seeds được phép xuất hiện lại ở lần nhận mới
 - Không kích hoạt CatFollower; quest `fishing_rod` chỉ mở khóa việc gọi và chăm mèo
 
 ---
@@ -469,7 +475,10 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
              ├─ InventorySystem.addRandomGardenReward()
              ├─ Random 1 item: rose / sunflower / tulip / bonsai
              ├─ Thêm vào kho runtime với quantity +1
-             └─ Hiện notification tên phần thưởng
+             ├─ Hiện notification tên phần thưởng
+             ├─ 10 giây đầu: quest indicator hiển thị `✓ Hoàn thành!`
+             ├─ Sau đó: quest indicator đổi sang countdown mở lại
+             └─ Hết 3600 giây, quest `seeds` tự mở lại
 ```
 
 ### Inventory Runtime
@@ -654,7 +663,7 @@ Camera.update(player, gameWorld)
 
 6. DialogSystem (UI overlay)
    └─ Dialog box + Text + Choices
-   └─ Quest indicators dạng stack ở góc phải
+   └─ Quest indicators dạng stack ở góc phải, gồm cả countdown mở lại cho `seeds`
    └─ Cho animation typewriter effect
 
 7. Inventory Overlay (nếu đang mở)
@@ -828,6 +837,7 @@ Player.update():
    - Random reward: rose / sunflower / tulip / bonsai
    - InventorySystem stores reward with quantity x1
    - Notification shows reward name
+   - Sau 3600 giây, quest `seeds` quay lại trạng thái chưa nhận để có thể làm vòng mới
 
 8. [FISHING & INVENTORY]
    Player đứng gần hồ sau khi có cần câu:
@@ -985,7 +995,8 @@ Optimization Techniques:
             │                   │         └─ C/Esc close
             │                   │
             │                   ├─ If seeds: random garden reward
-            │                   │    └─ InventorySystem.addRandomGardenReward()
+            │                   │    ├─ InventorySystem.addRandomGardenReward()
+            │                   │    └─ Sau 3600 giây -> [QUEST AVAILABLE AGAIN]
             │                   │
             │                   └─ Continue gameplay
             │

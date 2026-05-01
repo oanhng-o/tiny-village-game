@@ -935,4 +935,4 @@ Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo i
 - **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay/Cat following/Fishing
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
-Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ theo roadmap trong PLAN.md.
+Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ.

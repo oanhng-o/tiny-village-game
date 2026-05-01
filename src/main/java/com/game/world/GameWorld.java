@@ -40,6 +40,8 @@ public class GameWorld {
     private MapOverlay mapOverlay;
     private FishingMiniGame fishingMiniGame;
     private boolean inventoryOpen = false;
+    private boolean catCareOpen = false;
+    private int catCareSelection = 0;
 
     // Pickup notification
     private String pickupNotification = null;
@@ -91,9 +93,9 @@ public class GameWorld {
 
         dialogSystem.setOnQuestComplete((questId) -> {
             if (QuestSystem.FISHING_ROD_QUEST_ID.equals(questId)) {
-                // Cat starts following player after the main fishing quest.
-                cat.startFollowing(player);
-                showPickupNotification("🐱 Mèo con bắt đầu đi theo bạn!");
+                // Unlock cat care, but only bring the cat close when the player explicitly calls it.
+                cat.unlockCare(player);
+                showPickupNotification("🐱 Mèo con đã thân với bạn hơn! Nhấn C để gọi mèo lại gần.");
             } else if (QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
                 InventorySystem.InventoryItem reward = inventorySystem.addRandomGardenReward();
                 showPickupNotification("🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "!");
@@ -216,11 +218,34 @@ public class GameWorld {
             return;
         }
 
+        if (catCareOpen) {
+            handleCatCareInput(input);
+            cat.update(dt);
+            camera.update(player.getCenterX(), player.getCenterY(), dt);
+            updatePickupNotification(dt);
+            return;
+        }
+
         if (dialogSystem.isActive()) {
             // Dialog active → only handle dialog input
             dialogSystem.handleInput(input);
             updatePickupNotification(dt);
             return;
+        }
+
+        if (input.isKeyJustPressed(KeyCode.C) && cat.isCareUnlocked()) {
+            if (cat.isPlayerNearForCare(player)) {
+                catCareOpen = true;
+                clampCatCareSelection();
+                updatePickupNotification(dt);
+                return;
+            }
+
+            if (cat.callToPlayer(player)) {
+                showPickupNotification("🐱 Mèo đang chạy lại gần bạn!");
+            } else {
+                showPickupNotification("🐱 Mèo vừa phản hồi rồi, chờ " + formatCooldown(cat.getCallCooldownRemaining()) + ".");
+            }
         }
 
         if (input.isKeyJustPressed(KeyCode.F) && canStartFishing()) {
@@ -232,6 +257,7 @@ public class GameWorld {
 
         // Toggle runtime inventory overlay
         if (input.isKeyJustPressed(KeyCode.I)) {
+            catCareOpen = false;
             inventoryOpen = true;
             updatePickupNotification(dt);
             return;
@@ -246,8 +272,17 @@ public class GameWorld {
         player.handleInput(dt, input);
         player.update(dt);
 
+        if (input.isKeyJustPressed(KeyCode.E) && cat.isCareUnlocked() && cat.isPlayerInInteractionRange(player)) {
+            int previousHeartLevel = cat.getHeartLevel();
+            if (cat.pet(player)) {
+                showHeartProgressNotification("😺 Bạn vuốt ve mèo. Mood +5!", previousHeartLevel);
+            } else {
+                showPickupNotification("🐱 Mèo đang lim dim rồi, chờ " + formatCooldown(cat.getPetCooldownRemaining()) + ".");
+            }
+        }
+
         // Check NPC interaction
-        if (input.isKeyJustPressed(KeyCode.E) || input.isKeyJustPressed(KeyCode.ENTER)) {
+        if (input.isKeyJustPressed(KeyCode.ENTER)) {
             for (NPC npc : npcs) {
                 if (npc.canInteract(player)) {
                     dialogSystem.startDialog(npc);
@@ -391,6 +426,8 @@ public class GameWorld {
             gc.fillText("F", indicatorX + 6, indicatorY + 15);
         }
 
+        renderCatInteractionHint(gc, camX, camY);
+
         // Minimap overlay
         mapOverlay.render(gc, tileMap, player, npcs, items, cat);
 
@@ -406,6 +443,10 @@ public class GameWorld {
         // Inventory overlay should be topmost and pauses gameplay while open.
         if (inventoryOpen) {
             renderInventoryOverlay(gc);
+        }
+
+        if (catCareOpen) {
+            renderCatCareOverlay(gc);
         }
     }
 
@@ -453,7 +494,37 @@ public class GameWorld {
     private void renderControlsHint(GraphicsContext gc) {
         gc.setFill(Color.web("#FFFFFF", 1));
         gc.setFont(Font.font("Monospaced", 10));
-        gc.fillText("WASD: Di chuyển | E: Nói chuyện | F: Câu cá | M: Bản đồ | I: Kho | Space: Tiếp tục", 10, Constants.WINDOW_HEIGHT - 10);
+        String controlsText = "WASD: Di chuyển | Enter: NPC | E: Vuốt mèo | C: Gọi/chăm mèo | F: Câu cá | M: Bản đồ | I: Kho";
+        gc.fillText(controlsText, 10, Constants.WINDOW_HEIGHT - 10);
+    }
+
+    private void renderCatInteractionHint(GraphicsContext gc, double camX, double camY) {
+        if (!cat.isCareUnlocked() || inventoryOpen || catCareOpen || dialogSystem.isActive() || fishingMiniGame.isActive()) {
+            return;
+        }
+        if (!cat.isPlayerNearForCare(player)) {
+            return;
+        }
+
+        double indicatorY = cat.getY() - camY - 24;
+        double badgeSize = 20;
+        double gap = 6;
+        double firstIndicatorX = cat.getCenterX() - camX - badgeSize - gap / 2.0;
+
+        renderKeyIndicator(gc, firstIndicatorX, indicatorY, "E", 6);
+        renderKeyIndicator(gc, firstIndicatorX + badgeSize + gap, indicatorY, "C", 5);
+    }
+
+    private void renderKeyIndicator(GraphicsContext gc, double indicatorX, double indicatorY, String key, double textOffsetX) {
+        gc.setFill(Color.web("#000000", 0.6));
+        gc.fillRoundRect(indicatorX, indicatorY, 20, 20, 4, 4);
+        gc.setStroke(Color.web("#FFFFFF", 0.8));
+        gc.setLineWidth(1.5);
+        gc.strokeRoundRect(indicatorX, indicatorY, 20, 20, 4, 4);
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 14));
+        gc.fillText(key, indicatorX + textOffsetX, indicatorY + 15);
     }
 
     private void renderInventoryOverlay(GraphicsContext gc) {
@@ -523,6 +594,206 @@ public class GameWorld {
             gc.setFont(Font.font("Monospaced", 13));
             gc.fillText("Số lượng: x" + item.getQuantity(), cellX + 70, cellY + 54);
         }
+    }
+
+    private void renderCatCareOverlay(GraphicsContext gc) {
+        double w = Constants.WINDOW_WIDTH;
+        double h = Constants.WINDOW_HEIGHT;
+        double panelW = 560;
+        double panelH = 360;
+        double panelX = (w - panelW) / 2.0;
+        double panelY = (h - panelH) / 2.0;
+
+        gc.setFill(Color.web("#000000", 0.5));
+        gc.fillRect(0, 0, w, h);
+
+        gc.setFill(Color.web("#FFF8DC", 0.98));
+        gc.fillRoundRect(panelX, panelY, panelW, panelH, 18, 18);
+        gc.setStroke(Color.web("#F4A6C1"));
+        gc.setLineWidth(4);
+        gc.strokeRoundRect(panelX, panelY, panelW, panelH, 18, 18);
+
+        gc.setFill(Color.web("#5D4037"));
+        gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 24));
+        gc.fillText("Chăm sóc mèo", panelX + 24, panelY + 40);
+
+        gc.setFill(Color.web("#7A5A44"));
+        gc.setFont(Font.font("Monospaced", 11));
+        gc.fillText("C / Esc: Đóng", panelX + panelW - 115, panelY + 38);
+
+        double statusX = panelX + 24;
+        double statusY = panelY + 64;
+        double statusW = 215;
+        double statusH = 270;
+
+        gc.setFill(Color.web("#FFFFFF", 0.72));
+        gc.fillRoundRect(statusX, statusY, statusW, statusH, 12, 12);
+        gc.setStroke(Color.web("#F3D7A3"));
+        gc.setLineWidth(2);
+        gc.strokeRoundRect(statusX, statusY, statusW, statusH, 12, 12);
+
+        gc.setFill(Color.web("#4A4A4A"));
+        gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 15));
+        gc.fillText("Tình trạng", statusX + 18, statusY + 28);
+
+        gc.setFont(Font.font("Monospaced", 13));
+        gc.fillText("Mood: " + cat.getMoodLabel() + " (" + cat.getMood() + "/100)", statusX + 18, statusY + 58);
+
+        double moodBarX = statusX + 18;
+        double moodBarY = statusY + 72;
+        double moodBarW = statusW - 36;
+        gc.setFill(Color.web("#E0E0E0"));
+        gc.fillRoundRect(moodBarX, moodBarY, moodBarW, 14, 7, 7);
+        gc.setFill(Color.web("#FFB74D"));
+        gc.fillRoundRect(moodBarX, moodBarY, moodBarW * (cat.getMood() / 100.0), 14, 7, 7);
+
+        gc.setFill(Color.web("#4A4A4A"));
+        gc.fillText("Heart level: " + cat.getHeartLevel() + "/5", statusX + 18, statusY + 112);
+        gc.fillText("Affection: " + cat.getAffectionPoints(), statusX + 18, statusY + 136);
+        gc.fillText("Vuốt ve: " + formatCooldownStatus(cat.getPetCooldownRemaining()), statusX + 18, statusY + 170);
+        gc.fillText("Cho ăn: " + formatCooldownStatus(cat.getFeedCooldownRemaining()), statusX + 18, statusY + 194);
+        gc.fillText("Gọi mèo: " + formatCooldownStatus(cat.getCallCooldownRemaining()), statusX + 18, statusY + 218);
+
+        // gc.setFill(Color.web("#6D4C41"));
+        // gc.setFont(Font.font("Monospaced", 11));
+        // gc.fillText("Vuốt mèo trực tiếp bằng E", statusX + 18, statusY + 252);
+        // gc.fillText("Feed cá trong danh sách bên phải", statusX + 18, statusY + 270);
+
+        double listX = panelX + 260;
+        double listY = panelY + 64;
+        double listW = 276;
+        double listH = 270;
+
+        gc.setFill(Color.web("#FFFFFF", 0.72));
+        gc.fillRoundRect(listX, listY, listW, listH, 12, 12);
+        gc.setStroke(Color.web("#A8E6CF"));
+        gc.setLineWidth(2);
+        gc.strokeRoundRect(listX, listY, listW, listH, 12, 12);
+
+        gc.setFill(Color.web("#4A4A4A"));
+        gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 15));
+        gc.fillText("Cá mang theo", listX + 18, listY + 28);
+
+        List<InventorySystem.InventoryItem> fishItems = inventorySystem.getFishItems();
+        if (fishItems.isEmpty()) {
+            gc.setFill(Color.web("#7A5A44", 0.75));
+            gc.setFont(Font.font("Monospaced", 14));
+            gc.fillText("Chưa có cá trong kho", listX + 50, listY + 132);
+            gc.setFont(Font.font("Monospaced", 11));
+            gc.fillText("Hãy thắng mini-game câu cá trước", listX + 26, listY + 158);
+        } else {
+            clampCatCareSelection();
+            double rowX = listX + 14;
+            double rowY = listY + 44;
+            double rowW = listW - 28;
+            double rowH = 50;
+
+            for (int i = 0; i < fishItems.size(); i++) {
+                InventorySystem.InventoryItem item = fishItems.get(i);
+                double currentRowY = rowY + i * 58;
+
+                gc.setFill(i == catCareSelection ? Color.web("#FFF1B8") : Color.web("#FFFFFF", 0.78));
+                gc.fillRoundRect(rowX, currentRowY, rowW, rowH, 10, 10);
+                gc.setStroke(i == catCareSelection ? Color.web("#F9A825") : Color.web("#D6C49C", 0.9));
+                gc.setLineWidth(2);
+                gc.strokeRoundRect(rowX, currentRowY, rowW, rowH, 10, 10);
+
+                Image icon = item.getIcon();
+                if (icon != null) {
+                    gc.setImageSmoothing(false);
+                    gc.drawImage(icon, rowX + 10, currentRowY + 8, 34, 34);
+                }
+
+                gc.setFill(Color.web("#4A4A4A"));
+                gc.setFont(Font.font("Monospaced", javafx.scene.text.FontWeight.BOLD, 13));
+                gc.fillText(item.getDisplayName(), rowX + 54, currentRowY + 20);
+
+                gc.setFont(Font.font("Monospaced", 11));
+                gc.fillText("Số lượng: x" + item.getQuantity(), rowX + 54, currentRowY + 38);
+            }
+        }
+
+        gc.setFill(Color.web("#7A5A44"));
+        gc.setFont(Font.font("Monospaced", 11));
+        gc.fillText("↑/↓: Chọn cá | Enter: Cho ăn", panelX + 300, panelY + panelH - 12);
+    }
+
+    private void handleCatCareInput(InputHandler input) {
+        if (input.isKeyJustPressed(KeyCode.C) || input.isKeyJustPressed(KeyCode.ESCAPE)) {
+            catCareOpen = false;
+            return;
+        }
+
+        List<InventorySystem.InventoryItem> fishItems = inventorySystem.getFishItems();
+        if (fishItems.isEmpty()) {
+            catCareSelection = 0;
+            if (input.isKeyJustPressed(KeyCode.ENTER)) {
+                showPickupNotification("🐟 Bạn chưa có cá nào để cho mèo ăn.");
+            }
+            return;
+        }
+
+        if (input.isKeyJustPressed(KeyCode.UP)) {
+            catCareSelection = (catCareSelection - 1 + fishItems.size()) % fishItems.size();
+        } else if (input.isKeyJustPressed(KeyCode.DOWN)) {
+            catCareSelection = (catCareSelection + 1) % fishItems.size();
+        }
+
+        if (input.isKeyJustPressed(KeyCode.ENTER)) {
+            if (!cat.canFeed()) {
+                showPickupNotification("🐱 Mèo vẫn còn no, chờ " + formatCooldown(cat.getFeedCooldownRemaining()) + ".");
+                return;
+            }
+
+            clampCatCareSelection();
+            InventorySystem.InventoryItem selectedFish = fishItems.get(catCareSelection);
+            if (!inventorySystem.consumeItem(selectedFish.getId())) {
+                showPickupNotification("🐟 Không tìm thấy cá phù hợp trong kho.");
+                clampCatCareSelection();
+                return;
+            }
+
+            int previousHeartLevel = cat.getHeartLevel();
+            if (!cat.feed()) {
+                inventorySystem.addItem(selectedFish.getId());
+                showPickupNotification("🐱 Mèo chưa muốn ăn thêm ngay bây giờ.");
+                return;
+            }
+
+            showHeartProgressNotification("🐟 Mèo ăn " + selectedFish.getDisplayName() + " ngon lành! Mood +15!", previousHeartLevel);
+            clampCatCareSelection();
+        }
+    }
+
+    private void clampCatCareSelection() {
+        int fishCount = inventorySystem.getFishItems().size();
+        if (fishCount <= 0) {
+            catCareSelection = 0;
+            return;
+        }
+        if (catCareSelection < 0) {
+            catCareSelection = 0;
+        }
+        if (catCareSelection >= fishCount) {
+            catCareSelection = fishCount - 1;
+        }
+    }
+
+    private void showHeartProgressNotification(String baseMessage, int previousHeartLevel) {
+        int currentHeartLevel = cat.getHeartLevel();
+        if (currentHeartLevel > previousHeartLevel) {
+            showPickupNotification(baseMessage + " Heart +" + (currentHeartLevel - previousHeartLevel) + "!");
+            return;
+        }
+        showPickupNotification(baseMessage);
+    }
+
+    private String formatCooldown(double remaining) {
+        return (int) Math.ceil(Math.max(0.0, remaining)) + "s";
+    }
+
+    private String formatCooldownStatus(double remaining) {
+        return remaining > 0 ? "còn " + formatCooldown(remaining) : "sẵn sàng";
     }
 
     // Getters for MapOverlay

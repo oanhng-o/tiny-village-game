@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -26,6 +27,7 @@ public class SaveSystem {
     private static final String SAVE_FILE_NAME_BOY = "save-boy.properties";
     private static final String LEGACY_SAVE_FILE_NAME = "save.properties";
     private static final String KEY_VERSION = "meta.version";
+    private static final String KEY_SAVED_AT_EPOCH_SECONDS = "meta.savedAtEpochSeconds";
     private static final String KEY_IS_GIRL = "character.isGirl";
     private static final String KEY_PLAYER_X = "player.x";
     private static final String KEY_PLAYER_Y = "player.y";
@@ -71,6 +73,7 @@ public class SaveSystem {
 
         Properties properties = new Properties();
         properties.setProperty(KEY_VERSION, Integer.toString(CURRENT_VERSION));
+        properties.setProperty(KEY_SAVED_AT_EPOCH_SECONDS, Long.toString(data.savedAtEpochSeconds()));
         properties.setProperty(KEY_IS_GIRL, Boolean.toString(data.isGirl()));
         properties.setProperty(KEY_PLAYER_X, Double.toString(data.playerX()));
         properties.setProperty(KEY_PLAYER_Y, Double.toString(data.playerY()));
@@ -173,13 +176,18 @@ public class SaveSystem {
             }
         }
 
+        long savedAtEpochSeconds = parseLong(
+            properties.getProperty(KEY_SAVED_AT_EPOCH_SECONDS),
+            resolveFallbackSavedAtEpochSeconds(savePath));
+
         SaveData saveData = new SaveData(
                 Boolean.parseBoolean(properties.getProperty(KEY_IS_GIRL, Boolean.TRUE.toString())),
                 parseDouble(properties.getProperty(KEY_PLAYER_X), 19 * 32.0),
                 parseDouble(properties.getProperty(KEY_PLAYER_Y), 12 * 32.0),
                 parseInt(properties.getProperty(KEY_PLAYER_DIRECTION), 0),
+            savedAtEpochSeconds,
                 questStates,
-                questTimers,
+            adjustQuestTimersForOfflineProgress(questTimers, savedAtEpochSeconds),
                 collectedQuestItems,
                 questItemPositions,
                 inventoryItems,
@@ -218,6 +226,17 @@ public class SaveSystem {
         }
     }
 
+    private static long parseLong(String value, long defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
     private static double parseDouble(String value, double defaultValue) {
         if (value == null) {
             return defaultValue;
@@ -226,6 +245,26 @@ public class SaveSystem {
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException exception) {
             return defaultValue;
+        }
+    }
+
+    private static Map<String, Double> adjustQuestTimersForOfflineProgress(Map<String, Double> questTimers, long savedAtEpochSeconds) {
+        Map<String, Double> adjustedTimers = new LinkedHashMap<>();
+        long elapsedSeconds = Math.max(0L, Instant.now().getEpochSecond() - savedAtEpochSeconds);
+        for (Map.Entry<String, Double> entry : questTimers.entrySet()) {
+            double remaining = Math.max(0.0, entry.getValue() - elapsedSeconds);
+            if (remaining > 0.0) {
+                adjustedTimers.put(entry.getKey(), remaining);
+            }
+        }
+        return adjustedTimers;
+    }
+
+    private static long resolveFallbackSavedAtEpochSeconds(Path savePath) {
+        try {
+            return Files.getLastModifiedTime(savePath).toMillis() / 1000L;
+        } catch (IOException exception) {
+            return Instant.now().getEpochSecond();
         }
     }
 

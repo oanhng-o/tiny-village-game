@@ -16,6 +16,7 @@ public record SaveData(
         double playerX,
         double playerY,
         int playerDirection,
+        long savedAtEpochSeconds,
         Map<String, QuestSystem.QuestState> questStates,
     Map<String, Double> questTimers,
         Set<String> collectedQuestItems,
@@ -29,6 +30,7 @@ public record SaveData(
         int catAffection) {
 
     public SaveData {
+        savedAtEpochSeconds = Math.max(0L, savedAtEpochSeconds);
         questStates = copyQuestStates(questStates);
         questTimers = copyQuestTimers(questTimers);
         collectedQuestItems = copyCollectedItems(collectedQuestItems);

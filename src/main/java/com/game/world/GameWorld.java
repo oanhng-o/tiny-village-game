@@ -612,6 +612,7 @@ public class GameWorld {
                 player.getX(),
                 player.getY(),
                 player.getDirection(),
+            java.time.Instant.now().getEpochSecond(),
                 questSystem.getQuestStatesSnapshot(),
                 new LinkedHashMap<>(questResetTimers),
                 questSystem.getCollectedItemsSnapshot(),
@@ -635,7 +636,7 @@ public class GameWorld {
 
         if (questSystem.isQuestCompleted(QuestSystem.SEEDS_QUEST_ID)
                 && !questResetTimers.containsKey(QuestSystem.SEEDS_QUEST_ID)) {
-            questResetTimers.put(QuestSystem.SEEDS_QUEST_ID, SEEDS_QUEST_RESET_DELAY_SECONDS);
+            reopenRepeatableQuest(QuestSystem.SEEDS_QUEST_ID);
         }
 
         player.restoreProgressState(saveData.playerX(), saveData.playerY(), saveData.playerDirection());

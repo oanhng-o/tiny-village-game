@@ -216,6 +216,7 @@ Khi Character Selection hoàn tất:
 - Giới tính nhân vật đã chọn
 - Vị trí player
 - Hướng nhìn hiện tại của player
+- Thời điểm save gần nhất để tính tiến trình quest khi offline
 - Quest state theo `questId`
 - Countdown mở lại của quest lặp `seeds`
 - Danh sách quest item đã nhặt
@@ -230,7 +231,7 @@ Khi Character Selection hoàn tất:
 - Notification tạm thời
 - Cooldown pet/feed/call đang đếm
 
-Load luôn khôi phục tiến trình dài hạn, bao gồm cả vị trí quest item đang hoạt động, và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
+Load luôn khôi phục tiến trình dài hạn, bao gồm cả vị trí quest item đang hoạt động, đồng thời trừ thời gian offline khỏi countdown quest lặp trước khi vào gameplay, và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
 
 ### Continue / New Game Flow
 ```
@@ -254,6 +255,8 @@ Khi mở game:
 Khi đóng game:
    └─ Application.stop()
       └─ Nếu đang có GameWorld -> tự động save snapshot hiện tại vào slot Girl/Boy đúng với world đang chơi
+
+Nếu game bị tắt trong lúc quest `seeds` đang countdown mở lại, khoảng thời gian ngoài game vẫn được trừ vào timer khi người chơi bấm `Continue`.
 ```
 
 ---
@@ -873,6 +876,7 @@ Player.update():
    - Close game → app tự động save lại lần cuối vào đúng slot giới tính
    - Mở lại game → Character Selection → Continue / New Game Screen → chọn Continue để load slot tương ứng
    - Nếu quest item đang active nhưng chưa nhặt, game restore lại đúng vị trí spawn trước khi thoát
+   - Nếu countdown mở lại của quest `seeds` đã trôi bớt trong lúc game tắt, timer sau khi load sẽ giảm tương ứng; nếu đã hết giờ thì quest tự mở lại ngay
 
 12. [END]
    User closes window → Application.stop()
@@ -1073,11 +1077,11 @@ src/main/java/com/game/
 │
 ├── save/
 │   ├── SaveData.java
-│   │   └─ Snapshot immutable cho long-lived progress, gồm cả tọa độ quest item
+│   │   └─ Snapshot immutable cho long-lived progress, gồm cả tọa độ quest item và thời điểm save
 │   └── SaveSystem.java
 │       ├─ Save theo slot giới tính bằng java.util.Properties
 │       ├─ Đường dẫn `%USERPROFILE%/.tiny-village-game/save-girl.properties` / `save-boy.properties`
-│       └─ Parse / normalize dữ liệu save, gồm cả tọa độ quest item, khi load
+│       └─ Parse / normalize dữ liệu save, gồm cả tọa độ quest item và offline countdown, khi load
 │
 ├── entity/
 │   ├── Entity.java (abstract)

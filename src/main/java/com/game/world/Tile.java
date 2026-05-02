@@ -14,7 +14,7 @@ public enum Tile {
     BENCH(5, true, 5, 0),
     FENCE(6, true, 6, 0),
     BRIDGE(7, false, 7, 0),
-    TREE_TOP(8, false, 0, 1),  // Decoration layer, not solid
+    TREE_TOP(8, false, 0, 1), // Decoration layer, not solid
     DARK_GRASS(9, false, 1, 1),
     WATER_EDGE(10, true, 2, 1);
 
@@ -30,17 +30,29 @@ public enum Tile {
         this.tilesetRow = tilesetRow;
     }
 
-    public int getId() { return id; }
-    public boolean isSolid() { return solid; }
-    public int getTilesetCol() { return tilesetCol; }
-    public int getTilesetRow() { return tilesetRow; }
+    public int getId() {
+        return id;
+    }
+
+    public boolean isSolid() {
+        return solid;
+    }
+
+    public int getTilesetCol() {
+        return tilesetCol;
+    }
+
+    public int getTilesetRow() {
+        return tilesetRow;
+    }
 
     /**
      * Lấy Tile từ ID.
      */
     public static Tile fromId(int id) {
         for (Tile t : values()) {
-            if (t.id == id) return t;
+            if (t.id == id)
+                return t;
         }
         return GRASS;
     }

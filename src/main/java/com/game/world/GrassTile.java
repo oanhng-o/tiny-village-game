@@ -16,7 +16,7 @@ public class GrassTile {
     private static final int TILE_SIZE = 32;
     private static final Image[] grassCache = new Image[16];
     private static final Image[] darkGrassCache = new Image[16];
-    
+
     private static boolean isInitialized = false;
 
     private static final int[] MASK_TO_COL = new int[16];
@@ -24,15 +24,15 @@ public class GrassTile {
 
     static {
         // Layout:
-        // 1001 (9)  1000 (8)  1100 (12) 1101 (13)
-        // 0001 (1)  0000 (0)  0100 (4)  0101 (5)
-        // 0011 (3)  0010 (2)  0110 (6)  0111 (7)
+        // 1001 (9) 1000 (8) 1100 (12) 1101 (13)
+        // 0001 (1) 0000 (0) 0100 (4) 0101 (5)
+        // 0011 (3) 0010 (2) 0110 (6) 0111 (7)
         // 1011 (11) 1010 (10) 1110 (14) 1111 (15)
         int[][] layout = {
-            {9, 8, 12, 13},
-            {1, 0, 4, 5},
-            {3, 2, 6, 7},
-            {11, 10, 14, 15}
+                { 9, 8, 12, 13 },
+                { 1, 0, 4, 5 },
+                { 3, 2, 6, 7 },
+                { 11, 10, 14, 15 }
         };
         for (int r = 0; r < 4; r++) {
             for (int c = 0; c < 4; c++) {
@@ -44,8 +44,9 @@ public class GrassTile {
     }
 
     public static void init() {
-        if (isInitialized) return;
-        
+        if (isInitialized)
+            return;
+
         SpriteSheet externalGrass = loadExternalSheet("/assets/grass_autotile.png");
         SpriteSheet externalDarkGrass = loadExternalSheet("/assets/dark_grass_autotile.png");
 
@@ -55,14 +56,14 @@ public class GrassTile {
             } else {
                 grassCache[i] = generateGrassImage(i, false);
             }
-            
+
             if (externalDarkGrass != null) {
                 darkGrassCache[i] = externalDarkGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
             } else {
                 darkGrassCache[i] = generateGrassImage(i, true);
             }
         }
-        
+
         isInitialized = true;
     }
 
@@ -99,7 +100,7 @@ public class GrassTile {
     }
 
     /**
-     * Tính bitmask dựa trên 4 lân cận. 
+     * Tính bitmask dựa trên 4 lân cận.
      * Nếu tile liền kề cũng là GRASS hoặc DARK_GRASS thì bật bit tương ứng.
      * bit 0 (1): UP
      * bit 1 (2): RIGHT
@@ -111,10 +112,14 @@ public class GrassTile {
         int rows = layer.length;
         int cols = layer[0].length;
 
-        if (isWater(layer, c - 1, r, rows, cols)) mask |= 1; // LEFT
-        if (isWater(layer, c, r + 1, rows, cols)) mask |= 2; // DOWN
-        if (isWater(layer, c + 1, r, rows, cols)) mask |= 4; // RIGHT
-        if (isWater(layer, c, r - 1, rows, cols)) mask |= 8; // UP
+        if (isWater(layer, c - 1, r, rows, cols))
+            mask |= 1; // LEFT
+        if (isWater(layer, c, r + 1, rows, cols))
+            mask |= 2; // DOWN
+        if (isWater(layer, c + 1, r, rows, cols))
+            mask |= 4; // RIGHT
+        if (isWater(layer, c, r - 1, rows, cols))
+            mask |= 8; // UP
 
         return mask;
     }
@@ -138,7 +143,7 @@ public class GrassTile {
         Color base = isDark ? Color.web("#5A9A38") : Color.web("#7EC850");
         Color light = isDark ? Color.web("#6AB048") : Color.web("#8FD860");
         Color dark = isDark ? Color.web("#4A8A28") : Color.web("#6AB040");
-        
+
         // Autotile border colors
         Color outline = Color.web("#4A8A28"); // Dark green outline
         Color shadow = Color.web("#5A9A38"); // Dark shadow
@@ -155,22 +160,22 @@ public class GrassTile {
         pw.setColor(5, 6, light);
         pw.setColor(4, 7, light);
         pw.setColor(5, 7, light);
-        
+
         pw.setColor(20, 14, light);
         pw.setColor(21, 14, light);
         pw.setColor(20, 15, light);
         pw.setColor(21, 15, light);
-        
+
         pw.setColor(12, 24, dark);
         pw.setColor(13, 24, dark);
         pw.setColor(12, 25, dark);
         pw.setColor(13, 25, dark);
-        
+
         pw.setColor(26, 4, dark);
         pw.setColor(27, 4, dark);
         pw.setColor(26, 5, dark);
         pw.setColor(27, 5, dark);
-        
+
         pw.setColor(8, 18, light);
         pw.setColor(8, 19, light);
 

@@ -60,14 +60,14 @@ public class TileMap {
         for (int c = 0; c < MAP_COLS; c++) {
             groundLayer[0][c] = Tile.WATER.getId();
             groundLayer[1][c] = Tile.WATER.getId();
-            groundLayer[MAP_ROWS-1][c] = Tile.WATER.getId();
-            groundLayer[MAP_ROWS-2][c] = Tile.WATER.getId();
+            groundLayer[MAP_ROWS - 1][c] = Tile.WATER.getId();
+            groundLayer[MAP_ROWS - 2][c] = Tile.WATER.getId();
         }
         for (int r = 0; r < MAP_ROWS; r++) {
             groundLayer[r][0] = Tile.WATER.getId();
             groundLayer[r][1] = Tile.WATER.getId();
-            groundLayer[r][MAP_COLS-1] = Tile.WATER.getId();
-            groundLayer[r][MAP_COLS-2] = Tile.WATER.getId();
+            groundLayer[r][MAP_COLS - 1] = Tile.WATER.getId();
+            groundLayer[r][MAP_COLS - 2] = Tile.WATER.getId();
         }
 
         // === Entrance path from top ===
@@ -117,13 +117,13 @@ public class TileMap {
 
         // === Flowers scattered around ===
         int[][] flowerPos = {
-            {4, 8}, {4, 12}, {4, 28}, {4, 32},
-            {8, 5}, {8, 25}, {8, 33},
-            {12, 6}, {12, 24}, {12, 30},
-            {17, 6}, {17, 24},
-            {20, 8}, {20, 28}, {20, 33},
-            {22, 5}, {22, 12}, {22, 24}, {22, 30},
-            {25, 8}, {25, 15}, {25, 28},
+                { 4, 8 }, { 4, 12 }, { 4, 28 }, { 4, 32 },
+                { 8, 5 }, { 8, 25 }, { 8, 33 },
+                { 12, 6 }, { 12, 24 }, { 12, 30 },
+                { 17, 6 }, { 17, 24 },
+                { 20, 8 }, { 20, 28 }, { 20, 33 },
+                { 22, 5 }, { 22, 12 }, { 22, 24 }, { 22, 30 },
+                { 25, 8 }, { 25, 15 }, { 25, 28 },
         };
         for (int[] pos : flowerPos) {
             if (groundLayer[pos[0]][pos[1]] == Tile.GRASS.getId()) {
@@ -133,9 +133,9 @@ public class TileMap {
 
         // === Benches ===
         int[][] benchPos = {
-            {10, 8}, {10, 24},
-            {18, 8}, {18, 24},
-            {7, 30}, {22, 30}
+                { 10, 8 }, { 10, 24 },
+                { 18, 8 }, { 18, 24 },
+                { 7, 30 }, { 22, 30 }
         };
         for (int[] pos : benchPos) {
             if (groundLayer[pos[0]][pos[1]] == Tile.GRASS.getId()) {
@@ -145,13 +145,13 @@ public class TileMap {
 
         // === Tree clusters inside park ===
         int[][] treePos = {
-            {4, 6}, {5, 6}, {4, 34}, {5, 34},
-            {6, 4}, {6, 35},
-            {23, 4}, {24, 4}, {23, 35}, {24, 35},
-            {8, 22}, {9, 23},
-            {20, 22}, {21, 23},
-            {6, 26}, {7, 27},
-            {23, 10}, {24, 10},
+                { 4, 6 }, { 5, 6 }, { 4, 34 }, { 5, 34 },
+                { 6, 4 }, { 6, 35 },
+                { 23, 4 }, { 24, 4 }, { 23, 35 }, { 24, 35 },
+                { 8, 22 }, { 9, 23 },
+                { 20, 22 }, { 21, 23 },
+                { 6, 26 }, { 7, 27 },
+                { 23, 10 }, { 24, 10 },
         };
         for (int[] pos : treePos) {
             if (pos[0] >= 2 && pos[0] < MAP_ROWS - 2 && pos[1] >= 2 && pos[1] < MAP_COLS - 2) {
@@ -167,9 +167,9 @@ public class TileMap {
 
         // === Dark grass patches for variety ===
         int[][] darkGrassPos = {
-            {6, 8}, {7, 9}, {10, 30}, {11, 31},
-            {16, 5}, {17, 4}, {21, 28}, {22, 27},
-            {13, 26}, {14, 27}
+                { 6, 8 }, { 7, 9 }, { 10, 30 }, { 11, 31 },
+                { 16, 5 }, { 17, 4 }, { 21, 28 }, { 22, 27 },
+                { 13, 26 }, { 14, 27 }
         };
         for (int[] pos : darkGrassPos) {
             if (groundLayer[pos[0]][pos[1]] == Tile.GRASS.getId()) {
@@ -182,10 +182,10 @@ public class TileMap {
      * Render ground layer (layer 0) — chỉ tiles visible trong viewport.
      */
     public void renderGround(GraphicsContext gc, double camX, double camY) {
-        int startCol = Math.max(0, (int)(camX / TILE_SIZE));
-        int endCol = Math.min(MAP_COLS - 1, (int)((camX + Constants.WINDOW_WIDTH) / TILE_SIZE) + 1);
-        int startRow = Math.max(0, (int)(camY / TILE_SIZE));
-        int endRow = Math.min(MAP_ROWS - 1, (int)((camY + Constants.WINDOW_HEIGHT) / TILE_SIZE) + 1);
+        int startCol = Math.max(0, (int) (camX / TILE_SIZE));
+        int endCol = Math.min(MAP_COLS - 1, (int) ((camX + Constants.WINDOW_WIDTH) / TILE_SIZE) + 1);
+        int startRow = Math.max(0, (int) (camY / TILE_SIZE));
+        int endRow = Math.min(MAP_ROWS - 1, (int) ((camY + Constants.WINDOW_HEIGHT) / TILE_SIZE) + 1);
 
         gc.setImageSmoothing(false);
 
@@ -205,9 +205,9 @@ public class TileMap {
                     Image tileImg = tileImages[tileId];
                     if (tileImg != null) {
                         gc.drawImage(tileImg,
-                            c * TILE_SIZE - camX,
-                            r * TILE_SIZE - camY,
-                            TILE_SIZE, TILE_SIZE);
+                                c * TILE_SIZE - camX,
+                                r * TILE_SIZE - camY,
+                                TILE_SIZE, TILE_SIZE);
                     }
                 }
             }
@@ -218,10 +218,10 @@ public class TileMap {
      * Render decoration layer (layer 1).
      */
     public void renderDecorations(GraphicsContext gc, double camX, double camY) {
-        int startCol = Math.max(0, (int)(camX / TILE_SIZE));
-        int endCol = Math.min(MAP_COLS - 1, (int)((camX + Constants.WINDOW_WIDTH) / TILE_SIZE) + 1);
-        int startRow = Math.max(0, (int)(camY / TILE_SIZE));
-        int endRow = Math.min(MAP_ROWS - 1, (int)((camY + Constants.WINDOW_HEIGHT) / TILE_SIZE) + 1);
+        int startCol = Math.max(0, (int) (camX / TILE_SIZE));
+        int endCol = Math.min(MAP_COLS - 1, (int) ((camX + Constants.WINDOW_WIDTH) / TILE_SIZE) + 1);
+        int startRow = Math.max(0, (int) (camY / TILE_SIZE));
+        int endRow = Math.min(MAP_ROWS - 1, (int) ((camY + Constants.WINDOW_HEIGHT) / TILE_SIZE) + 1);
 
         gc.setImageSmoothing(false);
 
@@ -230,9 +230,9 @@ public class TileMap {
                 int decoId = decoLayer[r][c];
                 if (decoId >= 0 && decoId < tileImages.length && tileImages[decoId] != null) {
                     gc.drawImage(tileImages[decoId],
-                        c * TILE_SIZE - camX,
-                        r * TILE_SIZE - camY,
-                        TILE_SIZE, TILE_SIZE);
+                            c * TILE_SIZE - camX,
+                            r * TILE_SIZE - camY,
+                            TILE_SIZE, TILE_SIZE);
                 }
             }
         }
@@ -258,6 +258,11 @@ public class TileMap {
         return Tile.fromId(groundLayer[row][col]);
     }
 
-    public int getPixelWidth() { return MAP_COLS * TILE_SIZE; }
-    public int getPixelHeight() { return MAP_ROWS * TILE_SIZE; }
+    public int getPixelWidth() {
+        return MAP_COLS * TILE_SIZE;
+    }
+
+    public int getPixelHeight() {
+        return MAP_ROWS * TILE_SIZE;
+    }
 }

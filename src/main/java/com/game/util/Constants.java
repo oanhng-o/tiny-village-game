@@ -56,6 +56,10 @@ public class Constants {
     public static final String ASSET_NPC_GARDENER = "npc_gardener.png";
     public static final String ASSET_CAT = "cat.png";
     public static final String ASSET_TILES = "tiles.png";
+    public static final String ASSET_GRASS_AUTOTILE = "grass_autotile.png";
+    public static final String ASSET_DARK_GRASS_AUTOTILE = "dark_grass_autotile.png";
+    public static final String ASSET_GRASS_AUTOTILE_EXTENDED = "grass_autotile_extended.png";
+    public static final String ASSET_DARK_GRASS_AUTOTILE_EXTENDED = "dark_grass_autotile_extended.png";
     public static final String ASSET_FISHING_ROD = "fishing_rod.png";
     public static final String ASSET_SEEDS = "seeds.png";
     public static final String ASSET_REWARD_ROSE = "rose.png";

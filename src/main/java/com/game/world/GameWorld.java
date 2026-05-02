@@ -237,11 +237,11 @@ public class GameWorld {
         }
 
         if (QuestSystem.FISHING_ROD_QUEST_ID.equals(itemId)) {
-            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+            return tile == Tile.GRASS || tile == Tile.FLOWER;
         }
 
         if (QuestSystem.SEEDS_QUEST_ID.equals(itemId)) {
-            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+            return tile == Tile.GRASS || tile == Tile.FLOWER;
         }
 
         return false;

@@ -82,15 +82,16 @@ public class TileMap {
         // groundLayer[0][20] = Tile.PATH.getId();
 
         // === Main path system ===
-        // Horizontal path across
-        for (int c = 6; c < 34; c++) {
-            groundLayer[14][c] = Tile.PATH.getId();
-            groundLayer[15][c] = Tile.PATH.getId();
-        }
         // Vertical path
         for (int r = 6; r < 24; r++) {
             groundLayer[r][19] = Tile.PATH.getId();
             groundLayer[r][20] = Tile.PATH.getId();
+        }
+
+        // Horizontal path across
+        for (int c = 19; c < 34; c++) {
+            groundLayer[14][c] = Tile.PATH.getId();
+            groundLayer[15][c] = Tile.PATH.getId();
         }
 
         // === Central Lake ===
@@ -104,16 +105,6 @@ public class TileMap {
         groundLayer[14][12] = Tile.BRIDGE.getId();
         groundLayer[15][11] = Tile.BRIDGE.getId();
         groundLayer[15][12] = Tile.BRIDGE.getId();
-
-        // Water edges (make lake look nicer)
-        for (int c = 11; c < 18; c++) {
-            groundLayer[8][c] = Tile.DARK_GRASS.getId();
-            groundLayer[20][c] = Tile.DARK_GRASS.getId();
-        }
-        for (int r = 9; r < 20; r++) {
-            groundLayer[r][10] = Tile.DARK_GRASS.getId();
-            groundLayer[r][18] = Tile.DARK_GRASS.getId();
-        }
 
         // === Flowers scattered around ===
         int[][] flowerPos = {
@@ -165,17 +156,6 @@ public class TileMap {
             groundLayer[3][MAP_COLS - 1 - c] = Tile.FENCE.getId();
         }
 
-        // === Dark grass patches for variety ===
-        int[][] darkGrassPos = {
-                { 6, 8 }, { 7, 9 }, { 10, 30 }, { 11, 31 },
-                { 16, 5 }, { 17, 4 }, { 21, 28 }, { 22, 27 },
-                { 13, 26 }, { 14, 27 }
-        };
-        for (int[] pos : darkGrassPos) {
-            if (groundLayer[pos[0]][pos[1]] == Tile.GRASS.getId()) {
-                groundLayer[pos[0]][pos[1]] = Tile.DARK_GRASS.getId();
-            }
-        }
     }
 
     /**
@@ -193,13 +173,6 @@ public class TileMap {
             for (int c = startCol; c <= endCol; c++) {
                 int tileId = groundLayer[r][c];
                 if (tileId == Tile.GRASS.getId() || tileId == Tile.DARK_GRASS.getId()) {
-                    int mask = GrassTile.getTileMask(groundLayer, c, r);
-                    if (mask > 0) {
-                        Image waterImg = tileImages[Tile.WATER.getId()];
-                        if (waterImg != null) {
-                            gc.drawImage(waterImg, c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
-                        }
-                    }
                     GrassTile.render(gc, groundLayer, c, r, c * TILE_SIZE - camX, r * TILE_SIZE - camY);
                 } else {
                     Image tileImg = tileImages[tileId];

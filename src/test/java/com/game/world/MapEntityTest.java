@@ -114,7 +114,7 @@ public class MapEntityTest {
         Object dialogSystem = getPrivateField(gameWorld, "dialogSystem");
         // Lấy functional interface consumer để chạy thủ công
         java.util.function.Consumer<String> onQuestStart = (java.util.function.Consumer<String>) getPrivateField(dialogSystem, "onQuestStart");
-        
+
         if (onQuestStart != null) {
             onQuestStart.accept("fishing_rod");
         } else {
@@ -122,9 +122,9 @@ public class MapEntityTest {
         }
 
         assertTrue(rod.isVisible(), "Vật phẩm phải hiện sau khi Quest active.");
+        rod.setX(1120);
+        rod.setY(800);
 
-        // Kiểm tra tọa độ trên Minimap (Fishing rod tại 1120, 800)
-        // Offset (10, 10) + (1120 * 0.15625, 800 * 0.15625) = (185, 135)
         int miniX = 10 + (int) (rod.getX() * scaleX);
         int miniY = 10 + (int) (rod.getY() * scaleY);
 

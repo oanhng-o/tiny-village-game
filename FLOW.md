@@ -660,16 +660,21 @@ GrassTile.render(gc, groundLayer, col, row, x, y)
     │
     ├─ Tính bitmask 4-hướng (Lên, Phải, Xuống, Trái)
     │  └─ Kiểm tra tile xung quanh có phải là WATER / WATER_EDGE không (Out of bounds coi như Water)
-    │  └─ Bitmask: (UP_WATER ? 1 : 0) | (RIGHT_WATER ? 2 : 0) | (DOWN_WATER ? 4 : 0) | (LEFT_WATER ? 8 : 0)
+    │  └─ Bitmask: (LEFT_WATER ? 1 : 0) | (DOWN_WATER ? 2 : 0) | (RIGHT_WATER ? 4 : 0) | (UP_WATER ? 8 : 0)
     │
-    ├─ Lấy texture từ cache (đã sinh sẵn 16 biến thể)
-    │  ├─ Nếu cạnh tiếp xúc với WATER:
-    │  │  └─ Thêm viền tối (Shadow) và đường outline để tạo cảm giác 3D chìm xuống
+    ├─ Lấy texture từ cache (16 biến thể)
+    │  ├─ Nếu file `grass_autotile.png` / `dark_grass_autotile.png` tồn tại trong resource:
+    │  │  └─ Load từ spritesheet ngoài theo mapping:
+    │  │     1001 (9)  1000 (8)  1100 (12) 1101 (13)
+    │  │     0001 (1)  0000 (0)  0100 (4)  0101 (5)
+    │  │     0011 (3)  0010 (2)  0110 (6)  0111 (7)
+    │  │     1011 (11) 1010 (10) 1110 (14) 1111 (15)
     │  │
-    │  └─ Nếu là góc ngoài tiếp xúc với WATER (ví dụ: trên và trái đều là Water):
-    │     └─ Vẽ đè pixel màu outline để bo góc (rounded corner chibi style)
-    │
-    └─ Render tile cỏ đã có hiệu ứng lên map thay vì dùng tile tĩnh
+    │  ├─ Nếu KHÔNG có file (Fallback):
+    │  │  └─ Tự động sinh pixel art bằng code.
+    │  │  └─ Thêm viền tối (Shadow) và bo góc khi tiếp xúc WATER.
+    │  │
+    │  └─ Render tile cỏ đã có hiệu ứng lên map thay vì dùng tile tĩnh
 ```
 
 ---

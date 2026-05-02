@@ -5,6 +5,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import com.game.util.SpriteSheet;
 
 /**
  * GrassTile — Xử lý logic Autotiling cho tile cỏ.
@@ -18,15 +19,64 @@ public class GrassTile {
     
     private static boolean isInitialized = false;
 
+    private static final int[] MASK_TO_COL = new int[16];
+    private static final int[] MASK_TO_ROW = new int[16];
+
+    static {
+        // Layout:
+        // 1001 (9)  1000 (8)  1100 (12) 1101 (13)
+        // 0001 (1)  0000 (0)  0100 (4)  0101 (5)
+        // 0011 (3)  0010 (2)  0110 (6)  0111 (7)
+        // 1011 (11) 1010 (10) 1110 (14) 1111 (15)
+        int[][] layout = {
+            {9, 8, 12, 13},
+            {1, 0, 4, 5},
+            {3, 2, 6, 7},
+            {11, 10, 14, 15}
+        };
+        for (int r = 0; r < 4; r++) {
+            for (int c = 0; c < 4; c++) {
+                int m = layout[r][c];
+                MASK_TO_COL[m] = c;
+                MASK_TO_ROW[m] = r;
+            }
+        }
+    }
+
     public static void init() {
         if (isInitialized) return;
         
+        SpriteSheet externalGrass = loadExternalSheet("/assets/grass_autotile.png");
+        SpriteSheet externalDarkGrass = loadExternalSheet("/assets/dark_grass_autotile.png");
+
         for (int i = 0; i < 16; i++) {
-            grassCache[i] = generateGrassImage(i, false);
-            darkGrassCache[i] = generateGrassImage(i, true);
+            if (externalGrass != null) {
+                grassCache[i] = externalGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
+            } else {
+                grassCache[i] = generateGrassImage(i, false);
+            }
+            
+            if (externalDarkGrass != null) {
+                darkGrassCache[i] = externalDarkGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
+            } else {
+                darkGrassCache[i] = generateGrassImage(i, true);
+            }
         }
         
         isInitialized = true;
+    }
+
+    private static SpriteSheet loadExternalSheet(String path) {
+        try {
+            var resource = GrassTile.class.getResource(path);
+            if (resource != null) {
+                Image img = new Image(resource.toExternalForm());
+                return new SpriteSheet(img, TILE_SIZE, TILE_SIZE);
+            }
+        } catch (Exception e) {
+            System.out.println("Could not load external grass autotile: " + path);
+        }
+        return null;
     }
 
     /**
@@ -56,15 +106,15 @@ public class GrassTile {
      * bit 2 (4): DOWN
      * bit 3 (8): LEFT
      */
-    private static int getTileMask(int[][] layer, int c, int r) {
+    public static int getTileMask(int[][] layer, int c, int r) {
         int mask = 0;
         int rows = layer.length;
         int cols = layer[0].length;
 
-        if (isWater(layer, c, r - 1, rows, cols)) mask |= 1; // UP
-        if (isWater(layer, c + 1, r, rows, cols)) mask |= 2; // RIGHT
-        if (isWater(layer, c, r + 1, rows, cols)) mask |= 4; // DOWN
-        if (isWater(layer, c - 1, r, rows, cols)) mask |= 8; // LEFT
+        if (isWater(layer, c - 1, r, rows, cols)) mask |= 1; // LEFT
+        if (isWater(layer, c, r + 1, rows, cols)) mask |= 2; // DOWN
+        if (isWater(layer, c + 1, r, rows, cols)) mask |= 4; // RIGHT
+        if (isWater(layer, c, r - 1, rows, cols)) mask |= 8; // UP
 
         return mask;
     }
@@ -124,10 +174,10 @@ public class GrassTile {
         pw.setColor(8, 18, light);
         pw.setColor(8, 19, light);
 
-        boolean upWater = (mask & 1) != 0;
-        boolean rightWater = (mask & 2) != 0;
-        boolean downWater = (mask & 4) != 0;
-        boolean leftWater = (mask & 8) != 0;
+        boolean leftWater = (mask & 1) != 0;
+        boolean downWater = (mask & 2) != 0;
+        boolean rightWater = (mask & 4) != 0;
+        boolean upWater = (mask & 8) != 0;
 
         // 3. Draw Borders (Shadow only)
         if (upWater) {

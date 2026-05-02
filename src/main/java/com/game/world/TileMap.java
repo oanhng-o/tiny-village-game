@@ -193,6 +193,13 @@ public class TileMap {
             for (int c = startCol; c <= endCol; c++) {
                 int tileId = groundLayer[r][c];
                 if (tileId == Tile.GRASS.getId() || tileId == Tile.DARK_GRASS.getId()) {
+                    int mask = GrassTile.getTileMask(groundLayer, c, r);
+                    if (mask > 0) {
+                        Image waterImg = tileImages[Tile.WATER.getId()];
+                        if (waterImg != null) {
+                            gc.drawImage(waterImg, c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
                     GrassTile.render(gc, groundLayer, c, r, c * TILE_SIZE - camX, r * TILE_SIZE - camY);
                 } else {
                     Image tileImg = tileImages[tileId];

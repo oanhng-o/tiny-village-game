@@ -147,6 +147,12 @@ public class AssetManager {
         loaded = true;
     }
 
+    public void reset() {
+        images.clear();
+        spriteSheets.clear();
+        loaded = false;
+    }
+
     /**
      * Lấy image đã load.
      */

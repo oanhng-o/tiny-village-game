@@ -24,9 +24,61 @@ Tiny Village là một game 2D pixel art được phát triển bằng **Java 17
 ┌─────────────────────────────────────────────┐
 │  GameApplication.start(Stage)               │
 │  - Tạo Canvas 800x600 px                    │
-│  - Hiển thị Character Selection Screen      │
-│  - Setup InputHandler + GameLoop            │
+│  - Khởi tạo InputHandler + SaveSystem       │
+│  - Hiển thị Character Selection             │
+│  - Chọn Girl / Boy                          │
+│  - Sau đó mới hiện Continue / New Game      │
 └─────────────────────────────────────────────┘
+```
+
+### Startup Branch
+
+```
+Character Selection Screen
+   │
+   └─ Chọn Girl / Boy
+      └─ Continue / New Game Screen
+         ├─ Continue -> tải slot save của giới tính đã chọn
+         └─ New Game -> tạo phiên mới cho giới tính đã chọn
+```
+
+### Save Slots
+
+```
+%USERPROFILE%/.tiny-village-game/
+   ├─ save-girl.properties
+   └─ save-boy.properties
+```
+
+Mỗi giới tính có một slot save riêng. Continue sẽ tải slot của nhân vật đã chọn trước đó, còn auto-save khi thoát sẽ ghi đè slot đúng với giới tính của world hiện tại.
+
+---
+
+## 1a. Continue / New Game Screen
+
+### Giao Diện
+- Background và title cùng style với màn hình chọn nhân vật.
+- Menu nhỏ ở giữa màn hình gồm 2 lựa chọn: `Continue` và `New Game`.
+- Subtitle hiển thị giới tính vừa chọn để người chơi biết mình đang thao tác với slot nào.
+- Dòng trạng thái phía dưới hiển thị nhanh slot của giới tính đó đang có save hay chưa.
+
+### Điều Khiển
+```
+↑ / ↓ hoặc W / S    : Chuyển giữa Continue và New Game
+Enter / Space       : Xác nhận lựa chọn
+Esc                 : Quay lại Character Selection
+```
+
+### Quy Trình
+```
+Continue / New Game Screen
+    │
+    ├─ Continue
+   │  ├─ Nếu giới tính đã chọn chưa có save: báo lỗi và ở lại màn hình này
+   │  └─ Nếu có save: load slot của Girl/Boy đã chọn rồi vào gameplay
+    │
+    └─ New Game
+      └─ Khởi tạo phiên mới theo giới tính đã chọn rồi vào gameplay
 ```
 
 ---
@@ -45,7 +97,7 @@ Tiny Village là một game 2D pixel art được phát triển bằng **Java 17
 ### Điều Khiển
 ```
 ← / → Arrow Keys    : Chuyển giữa Girl/Boy
-Enter / Space       : Xác nhận lựa chọn
+Enter / Space       : Xác nhận nhân vật và sang màn hình Continue / New Game
 ```
 
 ### Quy Trình
@@ -56,11 +108,12 @@ Character Selection Screen
         │  └─ Cập nhật selectedOption (0 hoặc 1)
         │  └─ Render card được chọn với hiệu ứng
         │
-        └─ Người chơi bấm Enter/Space
-           └─ characterSelected = true
-           └─ Khởi tạo Player với giới tính đã chọn
-           └─ Chuyển sang Game Loop
+   └─ Người chơi bấm Enter/Space
+      └─ Chuyển sang Continue / New Game Screen
+      └─ Giữ lại giới tính đã chọn để quyết định slot save tương ứng
 ```
+
+Character Selection luôn xuất hiện trước để người chơi chốt giới tính, rồi mới quyết định `Continue` hay `New Game` cho đúng slot save.
 
 ---
 
@@ -87,8 +140,8 @@ Khi Character Selection hoàn tất:
              │   └─ NPC 4: "Bác làm vườn" (quest hạt giống, tile 5,25)
              │
              ├─► Items
-             │   ├─ Fishing Rod (hidden, spawns sau quest cần câu)
-             │   └─ Seeds (hidden, spawns sau quest hạt giống ở tile 32,5)
+             │   ├─ Fishing Rod (hidden, random 1 vị trí hợp lệ khắp map khi quest active)
+             │   └─ Seeds (hidden, random 1 vị trí hợp lệ khắp map khi quest active)
              │
              ├─► InventorySystem
              │   └─ Runtime-only, reset mỗi lần chơi mới
@@ -157,6 +210,57 @@ Khi Character Selection hoàn tất:
 
 ---
 
+## 4a. Save Slots & Auto Save
+
+### Dữ Liệu Được Lưu
+- Giới tính nhân vật đã chọn
+- Vị trí player
+- Hướng nhìn hiện tại của player
+- Thời điểm save gần nhất để tính tiến trình quest khi offline
+- Quest state theo `questId`
+- Countdown mở lại của quest lặp `seeds`
+- Danh sách quest item đã nhặt
+- Vị trí spawn hiện tại của quest item đang dùng trong world
+- Inventory runtime (hoa/cây/cá và quantity)
+- Cat state dài hạn: unlocked, vị trí, mood, affection, state
+
+### Dữ Liệu Không Lưu
+- Dialog đang mở dở
+- Fishing mini-game đang diễn ra
+- Inventory overlay / Cat Care overlay / minimap đang mở
+- Notification tạm thời
+- Cooldown pet/feed/call đang đếm
+
+Load luôn khôi phục tiến trình dài hạn, bao gồm cả vị trí quest item đang hoạt động, đồng thời trừ thời gian offline khỏi countdown quest lặp trước khi vào gameplay, và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
+
+### Continue / New Game Flow
+```
+Character Selection
+   └─ Continue / New Game Screen
+      ├─ Continue
+      │  └─ SaveSystem.load(selectedGender)
+      │  └─ Dựng GameWorld mới theo giới tính đã chọn
+      │  └─ Apply snapshot save vào world mới
+      │
+      └─ New Game
+         └─ Tạo GameWorld mới trống theo giới tính đã chọn
+```
+
+### Auto Save / Continue Flow
+```
+Khi mở game:
+   └─ Luôn vào Character Selection
+      └─ Continue / New Game Screen -> load hoặc tạo world theo giới tính đã chọn
+
+Khi đóng game:
+   └─ Application.stop()
+      └─ Nếu đang có GameWorld -> tự động save snapshot hiện tại vào slot Girl/Boy đúng với world đang chơi
+
+Nếu game bị tắt trong lúc quest `seeds` đang countdown mở lại, khoảng thời gian ngoài game vẫn được trừ vào timer khi người chơi bấm `Continue`.
+```
+
+---
+
 ## 5. Player Movement & Interaction
 
 ### Điều Khiển
@@ -171,7 +275,7 @@ C                      : Gọi mèo / mở menu chăm mèo
 F                      : Câu cá khi đứng gần nước
 M                      : Mở / đóng bản đồ nhỏ
 I                      : Mở / đóng kho lưu trữ
-Esc                    : Đóng kho lưu trữ hoặc Cat Care menu
+Esc                    : Đóng kho lưu trữ hoặc Cat Care menu đang mở
 ```
 
 ### Quy Trình Chuyển Động
@@ -275,6 +379,8 @@ Player đã hoàn thành quest `fishing_rod`
 - `seeds`: quest tìm hạt giống cho bác làm vườn.
 
 Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item pickup được lưu bằng `QuestSystem.addItem(itemId)`.
+Riêng quest `fishing_rod` là quest một lần: sau khi chuyển sang `COMPLETED`, quest đóng hẳn và NPC không thể kích hoạt lại quest này nữa.
+Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ trạng thái thành công trong 10 giây đầu, sau đó đổi sang countdown mở lại quest cho tới khi tự reset về `NOT_STARTED`.
 
 ### Quest: "Tìm cần câu cho bạn nhỏ" (`fishing_rod`)
 
@@ -284,7 +390,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - QuestSystem.startQuest("fishing_rod") → ACTIVE
 
 **Stage 2: ACTIVE**
-- Fishing Rod item trở thành visible trên map
+- Fishing Rod item được chọn ngẫu nhiên vào 1 ô hợp lệ bất kỳ trên map rồi trở thành visible
 - Người chơi di chuyển đến vị trí item
 - Khi va chạm với item → Auto pickup
 - QuestSystem.addItem("fishing_rod")
@@ -294,6 +400,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - Nói chuyện lần 2
 - Dialog: "Cảm ơn! 🎣"
 - QuestSystem.completeQuest("fishing_rod") → COMPLETED
+- Quest đóng lại vĩnh viễn, không quay về `NOT_STARTED` hay `ACTIVE`
 
 **Kết Quả:**
 - CatFollower: IDLE → WAITING
@@ -301,6 +408,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - Cat Care được mở khóa với mood ban đầu `60/100`
 - Heart level ban đầu là `1`, suy ra từ affection runtime
 - Player có thể dùng `C` để gọi mèo lại gần / mở Cat Care và `E` để vuốt mèo khi đã ở gần
+- Những lần nói chuyện sau đó với NPC chỉ còn dialog hậu quest, không nhận lại quest `fishing_rod`
 - Có thể tiếp tục explore hoặc nói chuyện NPC khác
 
 ### Quest: "Tìm hạt giống cho bác làm vườn" (`seeds`)
@@ -311,7 +419,7 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - QuestSystem.startQuest("seeds") → ACTIVE
 
 **Stage 2: ACTIVE**
-- Seeds item trở thành visible ở khu hoa phía trên-phải, tile `(32,5)`
+- Seeds item được chọn ngẫu nhiên vào 1 ô hợp lệ bất kỳ trên map rồi trở thành visible
 - Người chơi di chuyển đến vị trí item
 - Khi va chạm với item → Auto pickup
 - QuestSystem.addItem("seeds")
@@ -320,11 +428,15 @@ Mỗi quest có state `NOT_STARTED` → `ACTIVE` → `COMPLETED`, và item picku
 - Quay lại "Bác làm vườn"
 - Dialog hiển thị lời cảm ơn trước
 - QuestSystem.completeQuest("seeds") → COMPLETED
+- Quest indicator hiển thị `✓ Hoàn thành!` trong 10 giây đầu
+- Sau 10 giây, cùng quest đó đổi sang countdown 3600 giây trước khi quest tự mở lại
 
 **Kết Quả:**
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
 - Thêm reward vào InventorySystem runtime
 - Hiện notification tên phần thưởng nhận được
+- Quest indicator đổi từ trạng thái thành công sang countdown mở lại sau 10 giây
+- Hết 3600 giây: quest reset về `NOT_STARTED`, item Seeds được phép xuất hiện lại ở lần nhận mới
 - Không kích hoạt CatFollower; quest `fishing_rod` chỉ mở khóa việc gọi và chăm mèo
 
 ---
@@ -336,7 +448,11 @@ Item (Fishing Rod / Seeds) Object
     │ (visible = false, tồn tại trên map nhưng không render)
     │
     ├─ Quest tương ứng ACTIVE
-    │ └─ visible = true (render sprite item)
+   │ ├─ Chọn ngẫu nhiên 1 tile hợp lệ trên toàn bộ map
+   │ └─ visible = true (render sprite item)
+   │
+   ├─ Continue / Load khi quest vẫn ACTIVE
+   │ └─ Khôi phục lại đúng tọa độ spawn đã save trước đó
     │
     └─► Player.update() → Check collision với Item.getBounds()
         │
@@ -367,7 +483,10 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
              ├─ InventorySystem.addRandomGardenReward()
              ├─ Random 1 item: rose / sunflower / tulip / bonsai
              ├─ Thêm vào kho runtime với quantity +1
-             └─ Hiện notification tên phần thưởng
+             ├─ Hiện notification tên phần thưởng
+             ├─ 10 giây đầu: quest indicator hiển thị `✓ Hoàn thành!`
+             ├─ Sau đó: quest indicator đổi sang countdown mở lại
+             └─ Hết 3600 giây, quest `seeds` tự mở lại
 ```
 
 ### Inventory Runtime
@@ -409,6 +528,7 @@ Khi inventory overlay đang mở:
 - Không tương tác NPC
 - Không nhặt item
 - Không mở Cat Care
+- Esc sẽ đóng inventory ngay trong frame đó
 - World vẫn render phía sau overlay
 
 ---
@@ -551,7 +671,7 @@ Camera.update(player, gameWorld)
 
 6. DialogSystem (UI overlay)
    └─ Dialog box + Text + Choices
-   └─ Quest indicators dạng stack ở góc phải
+   └─ Quest indicators dạng stack ở góc phải, gồm cả countdown mở lại cho `seeds`
    └─ Cho animation typewriter effect
 
 7. Inventory Overlay (nếu đang mở)
@@ -670,19 +790,22 @@ Player.update():
 ```
 1. [STARTUP]
    Start game → Main.java → GameApplication.start()
+   - Hiện Character Selection
 
 2. [CHARACTER SELECTION]
-   Show selection screen (Girl/Boy)
-   User: Press → to Boy, Press Enter
-   → characterSelected = true
+   User: Chọn Girl hoặc Boy trước
+
+3. [CONTINUE / NEW GAME SCREEN]
+   - Nếu chọn Continue: Load slot save của giới tính vừa chọn
+   - Nếu chọn New Game: Bắt đầu game mới với giới tính vừa chọn
 
 3. [INIT]
    Create GameWorld:
    - TileMap with grass, water, trees, benches
    - Player at position (400, 300)
    - 4 NPCs scattered, gồm Bác làm vườn ở góc dưới-trái
-   - Fishing Rod item (hidden)
-   - Seeds item (hidden ở khu hoa phía trên-phải)
+   - Fishing Rod item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
+   - Seeds item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
    - InventorySystem empty (runtime-only)
    - CatFollower at (300, 300) - IDLE
    - Start GameLoop
@@ -695,7 +818,7 @@ Player.update():
    - Dialog: "Tìm cần câu cho em" (typewriter effect)
    - User: Press Space/Enter
    - QuestSystem.startQuest("fishing_rod") → ACTIVE
-   - Fishing Rod becomes visible on map
+   - Fishing Rod random 1 vị trí hợp lệ khắp map rồi becomes visible on map
 
 5. [QUEST ACTIVE]
    Player explores:
@@ -708,6 +831,7 @@ Player.update():
    Player returns to "Bạn nhỏ"
    - Dialog: "Cảm ơn! 🎣"
    - QuestSystem.completeQuest("fishing_rod") → COMPLETED
+   - Quest `fishing_rod` đóng hẳn, không thể nhận hoặc làm lại
    - CatFollower state: IDLE → WAITING
    - Cat Care được mở khóa nhưng mèo chưa tự chạy theo Player
 
@@ -715,12 +839,13 @@ Player.update():
    Player visits "Bác làm vườn" at tile (5,25)
    - Dialog asks for seeds
    - QuestSystem.startQuest("seeds") → ACTIVE
-   - Seeds become visible at tile (32,5)
+   - Seeds random 1 vị trí hợp lệ khắp map rồi becomes visible
    - Auto pickup → QuestSystem.addItem("seeds")
    - Return to gardener → QuestSystem.completeQuest("seeds") → COMPLETED
    - Random reward: rose / sunflower / tulip / bonsai
    - InventorySystem stores reward with quantity x1
    - Notification shows reward name
+   - Sau 3600 giây, quest `seeds` quay lại trạng thái chưa nhận để có thể làm vòng mới
 
 8. [FISHING & INVENTORY]
    Player đứng gần hồ sau khi có cần câu:
@@ -747,9 +872,16 @@ Player.update():
    - Heart level tăng dần theo affection runtime
    - Continue playing until close game
 
-11. [END]
-   User closes window → Game ends
-   Next launch creates a new empty inventory
+11. [SAVE / LOAD]
+   - Close game → app tự động save lại lần cuối vào đúng slot giới tính
+   - Mở lại game → Character Selection → Continue / New Game Screen → chọn Continue để load slot tương ứng
+   - Nếu quest item đang active nhưng chưa nhặt, game restore lại đúng vị trí spawn trước khi thoát
+   - Nếu countdown mở lại của quest `seeds` đã trôi bớt trong lúc game tắt, timer sau khi load sẽ giảm tương ứng; nếu đã hết giờ thì quest tự mở lại ngay
+
+12. [END]
+   User closes window → Application.stop()
+   → Auto save nếu đang có phiên gameplay
+   → Game ends
 ```
 
 ---
@@ -777,6 +909,11 @@ Main.java
         │   ├─ QuestSystem
       │   ├─ InventorySystem (runtime rewards + fish)
       │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
+            │
+            ├─► SaveSystem
+            │   ├─ Properties files `save-girl.properties` / `save-boy.properties`
+            │   ├─ save(snapshot)
+            │   └─ load(isGirl) -> SaveData
         │
         ├─► InputHandler (Input tracking)
         │   ├─ keyPressed
@@ -830,12 +967,16 @@ Optimization Techniques:
 ```
 [CHARACTER SELECT]
        │
-       ├─ Girl selected
-       │
-       └─► [GAMEPLAY]
+     └─ Enter
+        └─► [CONTINUE / NEW GAME]
+           ├─ Continue -> load selected gender slot -> [GAMEPLAY]
+           ├─ New Game -> create new selected gender world -> [GAMEPLAY]
+           └─ Esc -> [CHARACTER SELECT]
+
+     [GAMEPLAY]
             │
             ├─ Player moves (Input: WASD)
-            │
+         │
             ├─ Encounter NPC (Input: Enter)
             │
             ├─► [DIALOG]
@@ -852,6 +993,7 @@ Optimization Techniques:
             │              │
             │              └─► [RETURN TO NPC]
             │                   ├─ Dialog quest complete
+            │                   ├─ Quest `fishing_rod` closed permanently
             │                   │
             │                   ├─ If fishing_rod: [CAT CARE UNLOCKED]
             │                   │    ├─ Cat state: WAITING
@@ -863,7 +1005,8 @@ Optimization Techniques:
             │                   │         └─ C/Esc close
             │                   │
             │                   ├─ If seeds: random garden reward
-            │                   │    └─ InventorySystem.addRandomGardenReward()
+            │                   │    ├─ InventorySystem.addRandomGardenReward()
+            │                   │    └─ Sau 3600 giây -> [QUEST AVAILABLE AGAIN]
             │                   │
             │                   └─ Continue gameplay
             │
@@ -880,7 +1023,8 @@ Optimization Techniques:
             │         ├─ Show fish inventory for feeding
             │         └─ C/Esc closes overlay
             │
-            └─ Exit game
+              └─ Exit game
+                 └─ auto save current gender slot
 ```
 
 ---
@@ -930,6 +1074,14 @@ src/main/java/com/game/
 │       ├─ Random reward pool (rose, sunflower, tulip, bonsai, fish)
 │       ├─ Item quantities for inventory overlay
 │       └─ Consume fish items khi cho mèo ăn
+│
+├── save/
+│   ├── SaveData.java
+│   │   └─ Snapshot immutable cho long-lived progress, gồm cả tọa độ quest item và thời điểm save
+│   └── SaveSystem.java
+│       ├─ Save theo slot giới tính bằng java.util.Properties
+│       ├─ Đường dẫn `%USERPROFILE%/.tiny-village-game/save-girl.properties` / `save-boy.properties`
+│       └─ Parse / normalize dữ liệu save, gồm cả tọa độ quest item và offline countdown, khi load
 │
 ├── entity/
 │   ├── Entity.java (abstract)
@@ -1084,7 +1236,7 @@ Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo i
 - **Input**: WASD movement, Enter NPC interaction, E pet cat, C call/care cat, F fishing, I inventory, M map, Arrow keys for menus
 - **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay → Cat Care overlay)
 - **Cat Prompt UI**: Khi đứng gần mèo, game hiển thị badge `E` và `C` trên đầu mèo theo cùng phong cách với badge `F`; mood chỉ hiển thị trong Cat Care overlay, không hiển thị trực tiếp trên mèo.
-- **State Management**: Character select → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat calling / Fishing
+- **State Management**: Character select → Continue/New Game screen → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat calling / Fishing → Auto-save on exit vào slot giới tính tương ứng
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ.

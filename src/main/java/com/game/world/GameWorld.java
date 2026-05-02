@@ -7,6 +7,7 @@ import com.game.dialog.DialogSystem;
 import com.game.dialog.QuestSystem;
 import com.game.entity.*;
 import com.game.inventory.InventorySystem;
+import com.game.save.SaveData;
 import com.game.util.AssetManager;
 import com.game.util.Constants;
 
@@ -19,13 +20,19 @@ import javafx.scene.text.Font;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * GameWorld — Central manager: giữ tất cả entities, map, systems.
  * Điều phối update/render cycle và game logic.
  */
 public class GameWorld {
+
+    private static final double SEEDS_QUEST_RESET_DELAY_SECONDS = 3600.0;
+    private static final double SEEDS_QUEST_COMPLETION_BANNER_SECONDS = 10.0;
 
     private TileMap tileMap;
     private Player player;
@@ -39,6 +46,7 @@ public class GameWorld {
     private InventorySystem inventorySystem;
     private MapOverlay mapOverlay;
     private FishingMiniGame fishingMiniGame;
+    private final boolean isGirl;
     private boolean inventoryOpen = false;
     private boolean catCareOpen = false;
     private int catCareSelection = 0;
@@ -46,8 +54,11 @@ public class GameWorld {
     // Pickup notification
     private String pickupNotification = null;
     private double pickupTimer = 0;
+    private final Map<String, Double> questResetTimers = new LinkedHashMap<>();
 
     public GameWorld(boolean isGirl) {
+        this.isGirl = isGirl;
+
         // Load assets
         AssetManager.getInstance().loadAll(isGirl);
 
@@ -83,12 +94,7 @@ public class GameWorld {
 
         // Setup quest callbacks
         dialogSystem.setOnQuestStart((questId) -> {
-            // Show quest item on map
-            for (Item item : items) {
-                if (questId.equals(item.getItemId())) {
-                    item.setVisible(true);
-                }
-            }
+            activateQuestItem(questId);
         });
 
         dialogSystem.setOnQuestComplete((questId) -> {
@@ -97,8 +103,9 @@ public class GameWorld {
                 cat.unlockCare(player);
                 showPickupNotification("🐱 Mèo con đã thân với bạn hơn! Nhấn C để gọi mèo lại gần.");
             } else if (QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
+                questResetTimers.put(QuestSystem.SEEDS_QUEST_ID, SEEDS_QUEST_RESET_DELAY_SECONDS);
                 InventorySystem.InventoryItem reward = inventorySystem.addRandomGardenReward();
-                showPickupNotification("🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "!");
+                showPickupNotification("🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "! Quest sẽ mở lại sau 3600 giây.");
             }
         });
     }
@@ -144,7 +151,7 @@ public class GameWorld {
             ),
             List.of(
                 "Anh/chị tìm được cần câu chưa ạ?",
-                "Em nhớ lúc nãy chạy qua mấy bụi cây phía góc công viên..."
+                "Em chỉ nhớ là mình chạy khắp công viên thôi..."
             ),
             List.of(
                 "Ôi cần câu của em! Cảm ơn anh/chị nhiều lắm! 🎉",
@@ -161,12 +168,12 @@ public class GameWorld {
             QuestSystem.SEEDS_QUEST_ID,
             List.of(
                 "Chào cháu, bác đang chăm vườn hoa ở góc này.",
-                "Sáng nay bác làm rơi túi hạt giống khi đi qua khu hoa phía trên công viên.",
+                "Sáng nay bác làm rơi túi hạt giống khi đi dạo quanh công viên.",
                 "Cháu giúp bác tìm lại túi hạt giống được không?"
             ),
             List.of(
                 "Cháu tìm thấy túi hạt giống của bác chưa?",
-                "Bác nhớ nó rơi gần những luống hoa phía trên bên phải công viên."
+                "Bác chỉ nhớ là đã mang nó đi khắp công viên thôi."
             ),
             List.of(
                 "Đúng là túi hạt giống của bác rồi!",
@@ -191,12 +198,109 @@ public class GameWorld {
         items.add(seeds);
     }
 
+    private void activateQuestItem(String questId) {
+        for (Item item : items) {
+            if (questId.equals(item.getItemId()) && !item.isCollected()) {
+                assignRandomSpawnPosition(item);
+                item.setVisible(true);
+            }
+        }
+    }
+
+    private void assignRandomSpawnPosition(Item item) {
+        List<int[]> candidates = collectQuestSpawnCandidates(item.getItemId());
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        int[] selectedTile = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+        item.setX(selectedTile[0] * TileMap.TILE_SIZE);
+        item.setY(selectedTile[1] * TileMap.TILE_SIZE);
+    }
+
+    private List<int[]> collectQuestSpawnCandidates(String itemId) {
+        List<int[]> candidates = new ArrayList<>();
+
+        if (!QuestSystem.FISHING_ROD_QUEST_ID.equals(itemId)
+                && !QuestSystem.SEEDS_QUEST_ID.equals(itemId)) {
+            return candidates;
+        }
+
+        for (int row = 0; row < TileMap.MAP_ROWS; row++) {
+            for (int col = 0; col < TileMap.MAP_COLS; col++) {
+                Tile tile = tileMap.getTile(col, row);
+                if (!isAllowedQuestSpawnTile(itemId, tile) || isSpawnTileOccupied(col, row)) {
+                    continue;
+                }
+                candidates.add(new int[] { col, row });
+            }
+        }
+
+        return candidates;
+    }
+
+    private boolean isAllowedQuestSpawnTile(String itemId, Tile tile) {
+        if (tile.isSolid()) {
+            return false;
+        }
+
+        if (QuestSystem.FISHING_ROD_QUEST_ID.equals(itemId)) {
+            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+        }
+
+        if (QuestSystem.SEEDS_QUEST_ID.equals(itemId)) {
+            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+        }
+
+        return false;
+    }
+
+    private boolean isSpawnTileOccupied(int col, int row) {
+        Rectangle2D tileBounds = new Rectangle2D(
+                col * TileMap.TILE_SIZE,
+                row * TileMap.TILE_SIZE,
+                TileMap.TILE_SIZE,
+                TileMap.TILE_SIZE);
+
+        if (player.getFullBounds().intersects(tileBounds) || cat.getFullBounds().intersects(tileBounds)) {
+            return true;
+        }
+
+        for (NPC npc : npcs) {
+            if (npc.getFullBounds().intersects(tileBounds)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Map<String, SaveData.QuestItemPosition> captureQuestItemPositions() {
+        Map<String, SaveData.QuestItemPosition> positions = new LinkedHashMap<>();
+        for (Item item : items) {
+            positions.put(item.getItemId(), new SaveData.QuestItemPosition(item.getX(), item.getY()));
+        }
+        return positions;
+    }
+
+    private void restoreQuestItemPositions(Map<String, SaveData.QuestItemPosition> positions) {
+        for (Item item : items) {
+            SaveData.QuestItemPosition position = positions.get(item.getItemId());
+            if (position == null) {
+                continue;
+            }
+            item.setX(position.x());
+            item.setY(position.y());
+        }
+    }
+
     /**
      * Update game logic mỗi frame.
      */
     public void update(double dt, InputHandler input) {
         // Update dialog system
         dialogSystem.update(dt);
+        updateQuestResetTimers(dt);
 
         if (fishingMiniGame.isActive()) {
             FishingMiniGame.Result result = fishingMiniGame.update(dt, input);
@@ -408,7 +512,11 @@ public class GameWorld {
         dialogSystem.render(gc);
 
         // Quest indicator
-        dialogSystem.renderQuestIndicator(gc);
+        dialogSystem.renderQuestIndicator(
+            gc,
+            questResetTimers,
+            SEEDS_QUEST_RESET_DELAY_SECONDS,
+            SEEDS_QUEST_COMPLETION_BANNER_SECONDS);
 
         // Fishing indicator 'F'
         if (canStartFishing()) {
@@ -496,6 +604,112 @@ public class GameWorld {
         gc.setFont(Font.font("Monospaced", 10));
         String controlsText = "WASD: Di chuyển | Enter: NPC | E: Vuốt mèo | C: Gọi/chăm mèo | F: Câu cá | M: Bản đồ | I: Kho";
         gc.fillText(controlsText, 10, Constants.WINDOW_HEIGHT - 10);
+    }
+
+    public SaveData captureSaveData() {
+        return new SaveData(
+                isGirl,
+                player.getX(),
+                player.getY(),
+                player.getDirection(),
+            java.time.Instant.now().getEpochSecond(),
+                questSystem.getQuestStatesSnapshot(),
+                new LinkedHashMap<>(questResetTimers),
+                questSystem.getCollectedItemsSnapshot(),
+                captureQuestItemPositions(),
+                inventorySystem.getItemCountsSnapshot(),
+                cat.isCareUnlocked(),
+                cat.getX(),
+                cat.getY(),
+                cat.getState() == CatFollower.State.CALLING ? CatFollower.State.WAITING : cat.getState(),
+                cat.getMood(),
+                cat.getAffectionPoints());
+    }
+
+    public void applySaveData(SaveData saveData) {
+        questSystem.replaceQuestStates(saveData.questStates());
+        questResetTimers.clear();
+        questResetTimers.putAll(saveData.questTimers());
+        questSystem.replaceCollectedItems(saveData.collectedQuestItems());
+        restoreQuestItemPositions(saveData.questItemPositions());
+        inventorySystem.replaceItemCounts(saveData.inventoryItems());
+
+        if (questSystem.isQuestCompleted(QuestSystem.SEEDS_QUEST_ID)
+                && !questResetTimers.containsKey(QuestSystem.SEEDS_QUEST_ID)) {
+            reopenRepeatableQuest(QuestSystem.SEEDS_QUEST_ID);
+        }
+
+        player.restoreProgressState(saveData.playerX(), saveData.playerY(), saveData.playerDirection());
+        player.setHasFishingRod(questSystem.hasItem(QuestSystem.FISHING_ROD_QUEST_ID)
+                || questSystem.isQuestCompleted(QuestSystem.FISHING_ROD_QUEST_ID));
+
+        boolean catUnlocked = saveData.catUnlocked() || questSystem.isQuestCompleted(QuestSystem.FISHING_ROD_QUEST_ID);
+        int catMood = saveData.catUnlocked() ? saveData.catMood() : (catUnlocked ? 60 : 0);
+        int catAffection = saveData.catUnlocked() ? saveData.catAffection() : 0;
+        cat.restoreProgressState(player, catUnlocked, saveData.catX(), saveData.catY(), saveData.catState(), catMood, catAffection);
+
+        syncQuestItemsFromProgress(saveData.questItemPositions());
+
+        player.setState(Player.PlayerState.NORMAL);
+        inventoryOpen = false;
+        catCareOpen = false;
+        catCareSelection = 0;
+        pickupNotification = null;
+        pickupTimer = 0;
+        mapOverlay.setVisible(false);
+        camera.snapTo(player.getCenterX(), player.getCenterY());
+        updateQuestResetTimers(0);
+    }
+
+    private void syncQuestItemsFromProgress(Map<String, SaveData.QuestItemPosition> savedPositions) {
+        for (Item item : items) {
+            boolean collected = questSystem.hasItem(item.getItemId());
+            item.setCollected(collected);
+            boolean shouldBeVisible = !collected
+                    && questSystem.getQuestState(item.getItemId()) == QuestSystem.QuestState.ACTIVE;
+            if (shouldBeVisible && !savedPositions.containsKey(item.getItemId())) {
+                assignRandomSpawnPosition(item);
+            }
+            item.setVisible(shouldBeVisible);
+        }
+    }
+
+    private void updateQuestResetTimers(double dt) {
+        if (questResetTimers.isEmpty()) {
+            return;
+        }
+
+        List<String> questsToReopen = new ArrayList<>();
+        for (Map.Entry<String, Double> entry : questResetTimers.entrySet()) {
+            double remaining = Math.max(0, entry.getValue() - dt);
+            entry.setValue(remaining);
+            if (remaining <= 0) {
+                questsToReopen.add(entry.getKey());
+            }
+        }
+
+        for (String questId : questsToReopen) {
+            questResetTimers.remove(questId);
+            reopenRepeatableQuest(questId);
+        }
+    }
+
+    private void reopenRepeatableQuest(String questId) {
+        if (!QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
+            return;
+        }
+
+        questSystem.resetQuest(questId);
+        questSystem.removeItem(questId);
+
+        for (Item item : items) {
+            if (questId.equals(item.getItemId())) {
+                item.setCollected(false);
+                item.setVisible(false);
+            }
+        }
+
+        showPickupNotification("🌱 Bác làm vườn lại cần hạt giống rồi!");
     }
 
     private void renderCatInteractionHint(GraphicsContext gc, double camX, double camY) {
@@ -797,6 +1011,7 @@ public class GameWorld {
     }
 
     // Getters for MapOverlay
+    public boolean isGirl() { return isGirl; }
     public TileMap getTileMap() { return tileMap; }
     public Player getPlayer() { return player; }
     public List<NPC> getNPCs() { return npcs; }

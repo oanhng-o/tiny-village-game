@@ -55,18 +55,18 @@ public class TileMap {
             }
         }
 
-        // === Border: Trees around edges ===
+        // === Border: Water around edges ===
         for (int c = 0; c < MAP_COLS; c++) {
-            groundLayer[0][c] = Tile.TREE.getId();
-            groundLayer[1][c] = Tile.TREE.getId();
-            groundLayer[MAP_ROWS-1][c] = Tile.TREE.getId();
-            groundLayer[MAP_ROWS-2][c] = Tile.TREE.getId();
+            groundLayer[0][c] = Tile.WATER.getId();
+            groundLayer[1][c] = Tile.WATER.getId();
+            groundLayer[MAP_ROWS-1][c] = Tile.WATER.getId();
+            groundLayer[MAP_ROWS-2][c] = Tile.WATER.getId();
         }
         for (int r = 0; r < MAP_ROWS; r++) {
-            groundLayer[r][0] = Tile.TREE.getId();
-            groundLayer[r][1] = Tile.TREE.getId();
-            groundLayer[r][MAP_COLS-1] = Tile.TREE.getId();
-            groundLayer[r][MAP_COLS-2] = Tile.TREE.getId();
+            groundLayer[r][0] = Tile.WATER.getId();
+            groundLayer[r][1] = Tile.WATER.getId();
+            groundLayer[r][MAP_COLS-1] = Tile.WATER.getId();
+            groundLayer[r][MAP_COLS-2] = Tile.WATER.getId();
         }
 
         // === Entrance path from top ===
@@ -75,10 +75,10 @@ public class TileMap {
             groundLayer[r][20] = Tile.PATH.getId();
         }
         // Opening in trees for entrance
-        groundLayer[1][19] = Tile.PATH.getId();
-        groundLayer[1][20] = Tile.PATH.getId();
-        groundLayer[0][19] = Tile.PATH.getId();
-        groundLayer[0][20] = Tile.PATH.getId();
+        // groundLayer[1][19] = Tile.PATH.getId();
+        // groundLayer[1][20] = Tile.PATH.getId();
+        // groundLayer[0][19] = Tile.PATH.getId();
+        // groundLayer[0][20] = Tile.PATH.getId();
 
         // === Main path system ===
         // Horizontal path across
@@ -241,7 +241,7 @@ public class TileMap {
      */
     public Tile getTile(int col, int row) {
         if (col < 0 || col >= MAP_COLS || row < 0 || row >= MAP_ROWS) {
-            return Tile.TREE;
+            return Tile.WATER;
         }
         return Tile.fromId(groundLayer[row][col]);
     }

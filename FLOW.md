@@ -128,6 +128,7 @@ Khi Character Selection hoàn tất:
              │
              ├─► TileMap (40x30 tiles, 32px each)
              │   └─ Grass, Water, Paths, Trees, Benches...
+             │   └─ Biên giới bao quanh map là nước biển (Water tiles).
              │
              ├─► Player (dựa trên character đã chọn)
              │   └─ Position: Gần center map

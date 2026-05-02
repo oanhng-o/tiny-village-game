@@ -104,6 +104,72 @@ public class FishingMechanicsTest {
         assertTrue(inventorySystem.isEmpty(), "Kho đồ phải trống nếu thua.");
     }
 
+    @Test
+    public void testPlayerImmobilityDuringFishing() throws Exception {
+        // Bắt đầu câu cá
+        player.setX(13 * TileMap.TILE_SIZE);
+        player.setY(14 * TileMap.TILE_SIZE);
+        player.setHasFishingRod(true);
+        questSystem.completeQuest(QuestSystem.FISHING_ROD_QUEST_ID);
+        simulateKeyPress(KeyCode.F, 0.016);
+
+        assertTrue(fishingMiniGame.isActive());
+        double initialX = player.getX();
+        double initialY = player.getY();
+
+        // Thử di chuyển bằng phím W
+        input.keyPressed(KeyCode.W);
+        input.update();
+        gameWorld.update(0.016, input);
+
+        assertEquals(initialX, player.getX(), "Player không được di chuyển X khi đang câu cá.");
+        assertEquals(initialY, player.getY(), "Player không được di chuyển Y khi đang câu cá.");
+        assertFalse(player.isMoving(), "Player không được ở trạng thái moving khi đang câu cá.");
+    }
+
+    @Test
+    public void testPowerBarDecay() throws Exception {
+        // Vào giai đoạn POWER_BAR
+        player.setX(13 * TileMap.TILE_SIZE);
+        player.setY(14 * TileMap.TILE_SIZE);
+        player.setHasFishingRod(true);
+        questSystem.completeQuest(QuestSystem.FISHING_ROD_QUEST_ID);
+        simulateKeyPress(KeyCode.F, 0.016);
+
+        setPrivateField(fishingMiniGame, "waitTimer", 6.0);
+        gameWorld.update(0.016, input);
+
+        double initialValue = (double) getPrivateField(fishingMiniGame, "currentValue");
+
+        // Chờ 1 giây (decay mặc định là 15.0/s)
+        gameWorld.update(1.0, input);
+
+        double newValue = (double) getPrivateField(fishingMiniGame, "currentValue");
+        assertTrue(newValue < initialValue, "Giá trị thanh lực phải giảm dần theo thời gian.");
+        assertEquals(initialValue - 15.0, newValue, 0.001, "Thanh lực phải giảm đúng 15 đơn vị sau 1 giây.");
+    }
+
+    @Test
+    public void testPowerBarIncreaseOnSpacePress() throws Exception {
+        // Vào giai đoạn POWER_BAR
+        player.setX(13 * TileMap.TILE_SIZE);
+        player.setY(14 * TileMap.TILE_SIZE);
+        player.setHasFishingRod(true);
+        questSystem.completeQuest(QuestSystem.FISHING_ROD_QUEST_ID);
+        simulateKeyPress(KeyCode.F, 0.016);
+
+        setPrivateField(fishingMiniGame, "waitTimer", 6.0);
+        gameWorld.update(0.016, input);
+
+        double initialValue = (double) getPrivateField(fishingMiniGame, "currentValue");
+
+        // Nhấn phím SPACE
+        simulateKeyPress(KeyCode.SPACE, 0.016);
+
+        double newValue = (double) getPrivateField(fishingMiniGame, "currentValue");
+        assertTrue(newValue > initialValue, "Giá trị thanh lực phải tăng khi nhấn phím SPACE.");
+    }
+
     private void simulateKeyPress(KeyCode code, double dt) {
         input.keyPressed(code);
         input.update();

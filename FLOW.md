@@ -649,6 +649,29 @@ Camera.update(player, gameWorld)
            └─ Smooth scrolling
 ```
 
+```
+
+---
+
+## 11. Autotiling System
+
+```
+GrassTile.render(gc, groundLayer, col, row, x, y)
+    │
+    ├─ Tính bitmask 4-hướng (Lên, Phải, Xuống, Trái)
+    │  └─ Kiểm tra tile xung quanh có phải là WATER / WATER_EDGE không (Out of bounds coi như Water)
+    │  └─ Bitmask: (UP_WATER ? 1 : 0) | (RIGHT_WATER ? 2 : 0) | (DOWN_WATER ? 4 : 0) | (LEFT_WATER ? 8 : 0)
+    │
+    ├─ Lấy texture từ cache (đã sinh sẵn 16 biến thể)
+    │  ├─ Nếu cạnh tiếp xúc với WATER:
+    │  │  └─ Thêm viền tối (Shadow) và đường outline để tạo cảm giác 3D chìm xuống
+    │  │
+    │  └─ Nếu là góc ngoài tiếp xúc với WATER (ví dụ: trên và trái đều là Water):
+    │     └─ Vẽ đè pixel màu outline để bo góc (rounded corner chibi style)
+    │
+    └─ Render tile cỏ đã có hiệu ứng lên map thay vì dùng tile tĩnh
+```
+
 ---
 
 ## 11. Render Order (Z-depth)

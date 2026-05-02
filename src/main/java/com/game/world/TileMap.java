@@ -41,6 +41,7 @@ public class TileMap {
         }
 
         buildMap();
+        GrassTile.init(); // Initialize grass autotiling cache
     }
 
     /**
@@ -70,7 +71,7 @@ public class TileMap {
         }
 
         // === Entrance path from top ===
-        for (int r = 2; r < 8; r++) {
+        for (int r = 3; r < 8; r++) {
             groundLayer[r][19] = Tile.PATH.getId();
             groundLayer[r][20] = Tile.PATH.getId();
         }
@@ -191,12 +192,16 @@ public class TileMap {
         for (int r = startRow; r <= endRow; r++) {
             for (int c = startCol; c <= endCol; c++) {
                 int tileId = groundLayer[r][c];
-                Image tileImg = tileImages[tileId];
-                if (tileImg != null) {
-                    gc.drawImage(tileImg,
-                        c * TILE_SIZE - camX,
-                        r * TILE_SIZE - camY,
-                        TILE_SIZE, TILE_SIZE);
+                if (tileId == Tile.GRASS.getId() || tileId == Tile.DARK_GRASS.getId()) {
+                    GrassTile.render(gc, groundLayer, c, r, c * TILE_SIZE - camX, r * TILE_SIZE - camY);
+                } else {
+                    Image tileImg = tileImages[tileId];
+                    if (tileImg != null) {
+                        gc.drawImage(tileImg,
+                            c * TILE_SIZE - camX,
+                            r * TILE_SIZE - camY,
+                            TILE_SIZE, TILE_SIZE);
+                    }
                 }
             }
         }

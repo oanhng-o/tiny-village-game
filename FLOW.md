@@ -145,7 +145,7 @@ Khi Character Selection hoàn tất:
              │   └─ Seeds (hidden, random 1 vị trí hợp lệ khắp map khi quest active)
              │
              ├─► InventorySystem
-             │   └─ Runtime-only, reset mỗi lần chơi mới
+            │   └─ Được lưu theo save slot hiện tại, khôi phục khi Continue
              │
              ├─► CatFollower
              │   └─ State: IDLE (chưa theo)
@@ -174,7 +174,7 @@ Khi Character Selection hoàn tất:
              │  │
              │  ├─ Nếu Cat Care Overlay ACTIVE:
              │  │  ├─ C/Esc đóng menu chăm mèo
-             │  │  ├─ ↑/↓ chọn cá trong inventory runtime
+             │  │  ├─ ↑/↓ chọn cá trong inventory đã lưu
              │  │  ├─ Enter cho ăn vật phẩm đang chọn
              │  │  └─ Chặn movement/dialog/pickup/fishing
              │  │
@@ -222,7 +222,7 @@ Khi Character Selection hoàn tất:
 - Countdown mở lại của quest lặp `seeds`
 - Danh sách quest item đã nhặt
 - Vị trí spawn hiện tại của quest item đang dùng trong world
-- Inventory runtime (hoa/cây/cá và quantity)
+- Inventory persistent (hoa/cây/cá và quantity)
 - Cat state dài hạn: unlocked, vị trí, mood, affection, state
 
 ### Dữ Liệu Không Lưu
@@ -328,7 +328,7 @@ Player đã hoàn thành quest `fishing_rod`
    └─ Bấm C khi mèo đã ở gần
       └─ catCareOpen = true
         ├─ Hiển thị mood, heart level, affection, cooldown
-        ├─ Hiển thị danh sách cá trong inventory runtime
+            ├─ Hiển thị danh sách cá trong inventory đã lưu
         ├─ ↑/↓ chọn cá
         ├─ Enter: cho ăn cá đã chọn
         └─ C/Esc: đóng menu
@@ -407,7 +407,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - CatFollower: IDLE → WAITING
 - Mèo được mở khóa tương tác nhưng vẫn đứng tại chỗ cho tới khi Player bấm `C`
 - Cat Care được mở khóa với mood ban đầu `60/100`
-- Heart level ban đầu là `1`, suy ra từ affection runtime
+- Heart level ban đầu là `1`, suy ra từ affection hiện tại của mèo
 - Player có thể dùng `C` để gọi mèo lại gần / mở Cat Care và `E` để vuốt mèo khi đã ở gần
 - Những lần nói chuyện sau đó với NPC chỉ còn dialog hậu quest, không nhận lại quest `fishing_rod`
 - Có thể tiếp tục explore hoặc nói chuyện NPC khác
@@ -434,7 +434,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 
 **Kết Quả:**
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
-- Thêm reward vào InventorySystem runtime
+- Thêm reward vào InventorySystem persistent
 - Hiện notification tên phần thưởng nhận được
 - Quest indicator đổi từ trạng thái thành công sang countdown mở lại sau 10 giây
 - Hết 3600 giây: quest reset về `NOT_STARTED`, item Seeds được phép xuất hiện lại ở lần nhận mới
@@ -483,21 +483,21 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
           └─ GameWorld.onQuestComplete("seeds")
              ├─ InventorySystem.addRandomGardenReward()
              ├─ Random 1 item: rose / sunflower / tulip / bonsai
-             ├─ Thêm vào kho runtime với quantity +1
+             ├─ Thêm vào kho đã lưu với quantity +1
              ├─ Hiện notification tên phần thưởng
              ├─ 10 giây đầu: quest indicator hiển thị `✓ Hoàn thành!`
              ├─ Sau đó: quest indicator đổi sang countdown mở lại
              └─ Hết 3600 giây, quest `seeds` tự mở lại
 ```
 
-### Inventory Runtime
+   ### Inventory Persistent
 ```
 InventorySystem
-    ├─ Lưu trong memory theo phiên chơi hiện tại
+      ├─ Lưu theo save slot hiện tại
     ├─ Chứa cả reward cây/hoa và cá câu được
-    ├─ Không ghi file save/load
-    ├─ Restart game/app → inventory trống lại
-    └─ Hoàn thành quest hạt giống trong lần chơi mới → reward random lại
+      ├─ Được ghi/đọc cùng dữ liệu save/load
+      ├─ Continue → khôi phục lại đúng item và số lượng
+      └─ New Game → bắt đầu với inventory trống
 ```
 
 ### Fish Reward Flow
@@ -506,7 +506,7 @@ Fishing Mini-game thắng
    │
    └─ InventorySystem.addRandomFishReward()
       ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
-      ├─ Thêm vào inventory runtime với quantity +1
+   ├─ Thêm vào inventory đã lưu với quantity +1
       └─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
 ```
 
@@ -522,7 +522,7 @@ Người chơi nhấn I
        └─ I hoặc Esc → đóng overlay
 ```
 
-Inventory overlay chỉ để xem vật phẩm runtime. Hành động cho mèo ăn diễn ra trong Cat Care menu riêng, không thực hiện trực tiếp trong panel kho.
+Inventory overlay chỉ để xem vật phẩm đã lưu. Hành động cho mèo ăn diễn ra trong Cat Care menu riêng, không thực hiện trực tiếp trong panel kho.
 
 Khi inventory overlay đang mở:
 - Player không di chuyển
@@ -570,7 +570,7 @@ Mood:
    └─ Cho ăn 1 cá: +15 mood
 
 Heart level:
-   ├─ Tính từ affection runtime, không lưu file
+   ├─ Suy ra từ affection đã lưu trong file save
    ├─ Mở khóa Cat Care: heart level = 1
    ├─ Vuốt ve thành công: +2 affection
    ├─ Cho ăn 1 cá: +8 affection
@@ -839,7 +839,7 @@ Player.update():
    - 4 NPCs scattered, gồm Bác làm vườn ở góc dưới-trái
    - Fishing Rod item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
    - Seeds item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
-   - InventorySystem empty (runtime-only)
+   - InventorySystem empty nếu New Game, hoặc được khôi phục từ save nếu Continue
    - CatFollower at (300, 300) - IDLE
    - Start GameLoop
 
@@ -902,7 +902,7 @@ Player.update():
    - Bấm E khi mèo ở gần → mood +5, affection +2
    - Bấm C khi mèo ở gần → mở Cat Care menu
    - Chọn 1 con cá và bấm Enter → mèo ăn, mood +15, affection +8
-   - Heart level tăng dần theo affection runtime
+   - Heart level tăng dần theo affection đã lưu
    - Continue playing until close game
 
 11. [SAVE / LOAD]
@@ -940,7 +940,7 @@ Main.java
         │   ├─ Camera
         │   ├─ DialogSystem
         │   ├─ QuestSystem
-        │   ├─ InventorySystem (runtime rewards + fish)
+      │   ├─ InventorySystem (persistent rewards + fish)
         │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
             │
             ├─► SaveSystem
@@ -1046,7 +1046,7 @@ Optimization Techniques:
             ├─ Press I
             │    └─► [INVENTORY OVERLAY]
             │         ├─ Gameplay paused
-            │         ├─ Show runtime reward inventory
+            │         ├─ Show saved reward inventory
             │         └─ I/Esc closes overlay
             │
             ├─ Press C near cat
@@ -1103,7 +1103,7 @@ src/main/java/com/game/
 │
 ├── inventory/
 │   └── InventorySystem.java
-│       ├─ Runtime-only inventory cho reward cây/hoa và cá
+│       ├─ Inventory persistent cho reward cây/hoa và cá
 │       ├─ Random reward pool (rose, sunflower, tulip, bonsai, fish)
 │       ├─ Item quantities for inventory overlay
 │       └─ Consume fish items khi cho mèo ăn
@@ -1251,7 +1251,7 @@ Thắng:
     ├─ Nếu currentValue >= 100 trong vòng 7 giây
     ├─ InventorySystem.addRandomFishReward()
     ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
-    ├─ Cá được lưu trong inventory runtime
+   ├─ Cá được lưu trong inventory persistent
     ├─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
     └─ PlayerState: FISHING → NORMAL
 
@@ -1261,7 +1261,7 @@ Thua:
     └─ PlayerState: FISHING → NORMAL
 ```
 
-Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo inventory mới.
+Reward cá được lưu persistent giống garden reward; Continue sẽ khôi phục inventory theo save slot hiện tại.
 
 ---
 

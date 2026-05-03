@@ -1,5 +1,8 @@
 package com.game.world;
 
+import com.game.audio.AudioManager;
+import com.game.audio.AudioSettings;
+import com.game.audio.AudioSettingsStore;
 import com.game.core.Camera;
 import com.game.core.InputHandler;
 import com.game.dialog.DialogData;
@@ -8,6 +11,7 @@ import com.game.dialog.QuestSystem;
 import com.game.entity.*;
 import com.game.inventory.InventorySystem;
 import com.game.save.SaveData;
+import com.game.ui.AudioSettingsOverlay;
 import com.game.util.AssetManager;
 import com.game.util.Constants;
 
@@ -46,18 +50,25 @@ public class GameWorld {
     private InventorySystem inventorySystem;
     private MapOverlay mapOverlay;
     private FishingMiniGame fishingMiniGame;
+    private final AudioManager audioManager = AudioManager.getInstance();
+    private final AudioSettings audioSettings;
+    private final AudioSettingsStore audioSettingsStore;
+    private final AudioSettingsOverlay audioSettingsOverlay = new AudioSettingsOverlay();
     private final boolean isGirl;
     private boolean inventoryOpen = false;
     private boolean catCareOpen = false;
     private int catCareSelection = 0;
+    private double footstepTimer = 0;
 
     // Pickup notification
     private String pickupNotification = null;
     private double pickupTimer = 0;
     private final Map<String, Double> questResetTimers = new LinkedHashMap<>();
 
-    public GameWorld(boolean isGirl) {
+    public GameWorld(boolean isGirl, AudioSettings audioSettings, AudioSettingsStore audioSettingsStore) {
         this.isGirl = isGirl;
+        this.audioSettings = audioSettings;
+        this.audioSettingsStore = audioSettingsStore;
 
         // Load assets
         AssetManager.getInstance().loadAll(isGirl);
@@ -94,10 +105,12 @@ public class GameWorld {
 
         // Setup quest callbacks
         dialogSystem.setOnQuestStart((questId) -> {
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_QUEST_START);
             activateQuestItem(questId);
         });
 
         dialogSystem.setOnQuestComplete((questId) -> {
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_QUEST_COMPLETE);
             if (QuestSystem.FISHING_ROD_QUEST_ID.equals(questId)) {
                 // Unlock cat care, but only bring the cat close when the player explicitly
                 // calls it.
@@ -290,6 +303,20 @@ public class GameWorld {
      * Update game logic mỗi frame.
      */
     public void update(double dt, InputHandler input) {
+        if (input.isKeyJustPressed(KeyCode.P)) {
+            toggleAudioSettingsOverlay();
+            return;
+        }
+
+        if (audioSettingsOverlay.isOpen()) {
+            boolean wasOpen = true;
+            audioSettingsOverlay.handleInput(input, audioSettings, this::applyAudioSettings);
+            if (wasOpen && !audioSettingsOverlay.isOpen()) {
+                persistAudioSettings();
+            }
+            return;
+        }
+
         // Update dialog system
         dialogSystem.update(dt);
         updateQuestResetTimers(dt);
@@ -309,6 +336,7 @@ public class GameWorld {
         if (inventoryOpen) {
             if (input.isKeyJustPressed(KeyCode.I) || input.isKeyJustPressed(KeyCode.ESCAPE)) {
                 inventoryOpen = false;
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
             }
             updatePickupNotification(dt);
             return;
@@ -333,11 +361,13 @@ public class GameWorld {
             if (cat.isPlayerNearForCare(player)) {
                 catCareOpen = true;
                 clampCatCareSelection();
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
                 updatePickupNotification(dt);
                 return;
             }
 
             if (cat.callToPlayer(player)) {
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
                 showPickupNotification("🐱 Mèo đang chạy lại gần bạn!");
             } else {
                 showPickupNotification(
@@ -348,6 +378,7 @@ public class GameWorld {
         if (input.isKeyJustPressed(KeyCode.F) && canStartFishing()) {
             mapOverlay.setVisible(false);
             fishingMiniGame.start(player, getNearestWaterTile());
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
             updatePickupNotification(dt);
             return;
         }
@@ -356,6 +387,7 @@ public class GameWorld {
         if (input.isKeyJustPressed(KeyCode.I)) {
             catCareOpen = false;
             inventoryOpen = true;
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
             updatePickupNotification(dt);
             return;
         }
@@ -368,10 +400,12 @@ public class GameWorld {
         // Player movement
         player.handleInput(dt, input);
         player.update(dt);
+        // updateFootstepAudio(dt);
 
         if (input.isKeyJustPressed(KeyCode.E) && cat.isCareUnlocked() && cat.isPlayerInInteractionRange(player)) {
             int previousHeartLevel = cat.getHeartLevel();
             if (cat.pet(player)) {
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
                 showHeartProgressNotification("😺 Bạn vuốt ve mèo. Mood +5!", previousHeartLevel);
             } else {
                 showPickupNotification(
@@ -401,6 +435,7 @@ public class GameWorld {
             if (item.checkPickup(player)) {
                 item.setCollected(true);
                 questSystem.addItem(item.getItemId());
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
                 if (QuestSystem.FISHING_ROD_QUEST_ID.equals(item.getItemId())) {
                     player.setHasFishingRod(true);
                     showPickupNotification("🎣 Đã nhặt được cần câu!");
@@ -460,8 +495,10 @@ public class GameWorld {
         player.setState(Player.PlayerState.NORMAL);
         if (result == FishingMiniGame.Result.WIN) {
             InventorySystem.InventoryItem reward = inventorySystem.addRandomFishReward();
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
             showPickupNotification("🎣 Câu được: " + reward.getDisplayName() + "!");
         } else if (result == FishingMiniGame.Result.LOSE) {
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
             showPickupNotification("🐟 Cá chạy mất rồi!");
         }
     }
@@ -550,6 +587,11 @@ public class GameWorld {
         if (catCareOpen) {
             renderCatCareOverlay(gc);
         }
+
+        if (audioSettingsOverlay.isOpen()) {
+            audioSettingsOverlay.render(gc);
+            audioSettingsOverlay.renderRows(gc, audioSettings);
+        }
     }
 
     /**
@@ -598,7 +640,7 @@ public class GameWorld {
     private void renderControlsHint(GraphicsContext gc) {
         gc.setFill(Color.web("#FFFFFF", 1));
         gc.setFont(Font.font("Monospaced", 10));
-        String controlsText = "WASD: Di chuyển | Enter: NPC | E: Vuốt mèo | C: Gọi/chăm mèo | F: Câu cá | M: Bản đồ | I: Kho";
+        String controlsText = "WASD: Di chuyển | Enter: NPC | E: Vuốt mèo | C: Gọi/chăm mèo | F: Câu cá | M: Bản đồ | I: Kho | P: Âm thanh";
         gc.fillText(controlsText, 10, Constants.WINDOW_HEIGHT - 10);
     }
 
@@ -650,7 +692,9 @@ public class GameWorld {
         player.setState(Player.PlayerState.NORMAL);
         inventoryOpen = false;
         catCareOpen = false;
+        audioSettingsOverlay.close();
         catCareSelection = 0;
+        footstepTimer = 0;
         pickupNotification = null;
         pickupTimer = 0;
         mapOverlay.setVisible(false);
@@ -934,6 +978,7 @@ public class GameWorld {
     private void handleCatCareInput(InputHandler input) {
         if (input.isKeyJustPressed(KeyCode.C) || input.isKeyJustPressed(KeyCode.ESCAPE)) {
             catCareOpen = false;
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
             return;
         }
 
@@ -948,8 +993,10 @@ public class GameWorld {
 
         if (input.isKeyJustPressed(KeyCode.UP)) {
             catCareSelection = (catCareSelection - 1 + fishItems.size()) % fishItems.size();
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
         } else if (input.isKeyJustPressed(KeyCode.DOWN)) {
             catCareSelection = (catCareSelection + 1) % fishItems.size();
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
         }
 
         if (input.isKeyJustPressed(KeyCode.ENTER)) {
@@ -974,9 +1021,54 @@ public class GameWorld {
                 return;
             }
 
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
             showHeartProgressNotification("🐟 Mèo ăn " + selectedFish.getDisplayName() + " ngon lành! Mood +15!",
                     previousHeartLevel);
             clampCatCareSelection();
+        }
+    }
+
+    private void updateFootstepAudio(double dt) {
+        if (player.getState() != Player.PlayerState.NORMAL || !player.didMoveThisFrame()) {
+            footstepTimer = 0;
+            return;
+        }
+
+        int footCol = (int) (player.getCenterX() / TileMap.TILE_SIZE);
+        int footRow = (int) ((player.getY() + player.getHeight() - 2) / TileMap.TILE_SIZE);
+        Tile footTile = tileMap.getTile(footCol, footRow);
+        if (footTile != Tile.GRASS && footTile != Tile.DARK_GRASS && footTile != Tile.FLOWER) {
+            footstepTimer = 0;
+            return;
+        }
+
+        footstepTimer += dt;
+        if (footstepTimer >= Constants.FOOTSTEP_INTERVAL_SECONDS) {
+            footstepTimer = 0;
+            audioManager.playFootstep();
+        }
+    }
+
+    private void toggleAudioSettingsOverlay() {
+        if (audioSettingsOverlay.isOpen()) {
+            audioSettingsOverlay.close();
+            persistAudioSettings();
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
+            return;
+        }
+
+        audioSettingsOverlay.open();
+        audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
+    }
+
+    private void applyAudioSettings() {
+        audioManager.applySettings(audioSettings);
+    }
+
+    private void persistAudioSettings() {
+        applyAudioSettings();
+        if (audioSettingsStore != null) {
+            audioSettingsStore.save(audioSettings);
         }
     }
 

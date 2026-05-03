@@ -5,6 +5,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import com.game.util.Constants;
 import com.game.util.SpriteSheet;
 
 /**
@@ -14,9 +15,47 @@ import com.game.util.SpriteSheet;
 public class GrassTile {
 
     private static final int TILE_SIZE = 32;
-    private static final Image[] grassCache = new Image[16];
-    private static final Image[] darkGrassCache = new Image[16];
-    
+    private static final int CARDINAL_MASK = 0x0F;
+    private static final int LEFT_WATER = 1;
+    private static final int DOWN_WATER = 2;
+    private static final int RIGHT_WATER = 4;
+    private static final int UP_WATER = 8;
+    private static final int NORTH_WEST_WATER = 16;
+    private static final int SOUTH_WEST_WATER = 32;
+    private static final int SOUTH_EAST_WATER = 64;
+    private static final int NORTH_EAST_WATER = 128;
+
+    private static final int[][] OUTER_CORNER_CUT = {
+        { 0, 0 }, { 1, 0 }, { 2, 0 },
+        { 0, 1 }, { 1, 1 }, { 2, 1 },
+        { 0, 2 }, { 1, 2 },
+        { 0, 3 },
+        { 3, 0 }, { 2, 2 }, { 1, 3 }
+    };
+    private static final int[][] OUTER_CORNER_OUTLINE = {
+        { 4, 0 }, { 3, 1 }, { 2, 3 }, { 1, 4 }, { 0, 5 }
+    };
+    private static final int[][] OUTER_CORNER_SHADOW = {
+        { 5, 0 }, { 4, 1 }, { 3, 2 }, { 2, 4 }, { 1, 5 }, { 0, 6 }
+    };
+    private static final int[][] INNER_CORNER_CUT = {
+        { 0, 0 }, { 1, 0 }, { 2, 0 },
+        { 0, 1 }, { 1, 1 },
+        { 0, 2 },
+        { 3, 0 }, { 2, 1 }, { 1, 2 }, { 0, 3 }
+    };
+    private static final int[][] INNER_CORNER_OUTLINE = {
+        { 4, 0 }, { 3, 1 }, { 2, 2 }, { 1, 3 }, { 0, 4 }
+    };
+    private static final int[][] INNER_CORNER_SHADOW = {
+        { 5, 0 }, { 4, 1 }, { 3, 2 }, { 2, 3 }, { 1, 4 }, { 0, 5 }
+    };
+
+    private static final Image[] grassBaseCache = new Image[16];
+    private static final Image[] darkGrassBaseCache = new Image[16];
+    private static final Image[] grassCache = new Image[256];
+    private static final Image[] darkGrassCache = new Image[256];
+
     private static boolean isInitialized = false;
 
     private static final int[] MASK_TO_COL = new int[16];
@@ -24,15 +63,15 @@ public class GrassTile {
 
     static {
         // Layout:
-        // 1001 (9)  1000 (8)  1100 (12) 1101 (13)
-        // 0001 (1)  0000 (0)  0100 (4)  0101 (5)
-        // 0011 (3)  0010 (2)  0110 (6)  0111 (7)
+        // 1001 (9) 1000 (8) 1100 (12) 1101 (13)
+        // 0001 (1) 0000 (0) 0100 (4) 0101 (5)
+        // 0011 (3) 0010 (2) 0110 (6) 0111 (7)
         // 1011 (11) 1010 (10) 1110 (14) 1111 (15)
         int[][] layout = {
-            {9, 8, 12, 13},
-            {1, 0, 4, 5},
-            {3, 2, 6, 7},
-            {11, 10, 14, 15}
+                { 9, 8, 12, 13 },
+                { 1, 0, 4, 5 },
+                { 3, 2, 6, 7 },
+                { 11, 10, 14, 15 }
         };
         for (int r = 0; r < 4; r++) {
             for (int c = 0; c < 4; c++) {
@@ -44,39 +83,77 @@ public class GrassTile {
     }
 
     public static void init() {
-        if (isInitialized) return;
-        
-        SpriteSheet externalGrass = loadExternalSheet("/assets/grass_autotile.png");
-        SpriteSheet externalDarkGrass = loadExternalSheet("/assets/dark_grass_autotile.png");
+        if (isInitialized)
+            return;
+
+        SpriteSheet extendedGrass = loadExtendedSheet(Constants.ASSET_GRASS_AUTOTILE_EXTENDED);
+        SpriteSheet extendedDarkGrass = loadExtendedSheet(Constants.ASSET_DARK_GRASS_AUTOTILE_EXTENDED);
+        SpriteSheet externalGrass = loadExternalSheet(Constants.ASSET_GRASS_AUTOTILE);
+        SpriteSheet externalDarkGrass = loadExternalSheet(Constants.ASSET_DARK_GRASS_AUTOTILE);
 
         for (int i = 0; i < 16; i++) {
             if (externalGrass != null) {
-                grassCache[i] = externalGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
+                grassBaseCache[i] = externalGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
             } else {
-                grassCache[i] = generateGrassImage(i, false);
+                grassBaseCache[i] = generateGrassImage(i, false);
             }
-            
+
             if (externalDarkGrass != null) {
-                darkGrassCache[i] = externalDarkGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
+                darkGrassBaseCache[i] = externalDarkGrass.getFrame(MASK_TO_COL[i], MASK_TO_ROW[i]);
             } else {
-                darkGrassCache[i] = generateGrassImage(i, true);
+                darkGrassBaseCache[i] = generateGrassImage(i, true);
             }
         }
-        
+
+        for (int i = 0; i < 256; i++) {
+            grassCache[i] = resolveTileVariant(extendedGrass, grassBaseCache, i, false);
+            darkGrassCache[i] = resolveTileVariant(extendedDarkGrass, darkGrassBaseCache, i, true);
+        }
+
         isInitialized = true;
     }
 
-    private static SpriteSheet loadExternalSheet(String path) {
+    private static SpriteSheet loadExternalSheet(String filename) {
         try {
-            var resource = GrassTile.class.getResource(path);
+            var resource = GrassTile.class.getResource(Constants.getAssetPath(filename));
             if (resource != null) {
                 Image img = new Image(resource.toExternalForm());
                 return new SpriteSheet(img, TILE_SIZE, TILE_SIZE);
             }
         } catch (Exception e) {
-            System.out.println("Could not load external grass autotile: " + path);
+            System.out.println("Could not load external grass autotile: " + filename);
         }
         return null;
+    }
+
+    private static SpriteSheet loadExtendedSheet(String filename) {
+        SpriteSheet sheet = loadExternalSheet(filename);
+        if (sheet == null) {
+            return null;
+        }
+
+        Image image = sheet.getSheet();
+        int columns = (int) Math.round(image.getWidth() / TILE_SIZE);
+        int rows = (int) Math.round(image.getHeight() / TILE_SIZE);
+        if (columns < 16 || rows < 16) {
+            System.out.println("Ignoring grass autotile sheet " + filename
+                    + " because it must be at least 16x16 tiles (512x512 px).");
+            return null;
+        }
+
+        return sheet;
+    }
+
+    private static Image resolveTileVariant(SpriteSheet extendedSheet, Image[] baseCache, int mask, boolean isDark) {
+        if (extendedSheet != null) {
+            int cardinalColumn = mask & CARDINAL_MASK;
+            Image frame = extendedSheet.getFrame(cardinalColumn, 0);
+            if (frame != null) {
+                return frame;
+            }
+        }
+
+        return baseCache[mask & CARDINAL_MASK];
     }
 
     /**
@@ -99,7 +176,7 @@ public class GrassTile {
     }
 
     /**
-     * Tính bitmask dựa trên 4 lân cận. 
+     * Tính bitmask dựa trên 4 lân cận.
      * Nếu tile liền kề cũng là GRASS hoặc DARK_GRASS thì bật bit tương ứng.
      * bit 0 (1): UP
      * bit 1 (2): RIGHT
@@ -111,20 +188,143 @@ public class GrassTile {
         int rows = layer.length;
         int cols = layer[0].length;
 
-        if (isWater(layer, c - 1, r, rows, cols)) mask |= 1; // LEFT
-        if (isWater(layer, c, r + 1, rows, cols)) mask |= 2; // DOWN
-        if (isWater(layer, c + 1, r, rows, cols)) mask |= 4; // RIGHT
-        if (isWater(layer, c, r - 1, rows, cols)) mask |= 8; // UP
+        boolean leftWater = isTransitionTile(layer, c - 1, r, rows, cols);
+        boolean downWater = isTransitionTile(layer, c, r + 1, rows, cols);
+        boolean rightWater = isTransitionTile(layer, c + 1, r, rows, cols);
+        boolean upWater = isTransitionTile(layer, c, r - 1, rows, cols);
+
+        if (leftWater)
+            mask |= LEFT_WATER;
+        if (downWater)
+            mask |= DOWN_WATER;
+        if (rightWater)
+            mask |= RIGHT_WATER;
+        if (upWater)
+            mask |= UP_WATER;
+
+        if (!leftWater && !upWater && isTransitionTile(layer, c - 1, r - 1, rows, cols))
+            mask |= NORTH_WEST_WATER;
+        if (!leftWater && !downWater && isTransitionTile(layer, c - 1, r + 1, rows, cols))
+            mask |= SOUTH_WEST_WATER;
+        if (!rightWater && !downWater && isTransitionTile(layer, c + 1, r + 1, rows, cols))
+            mask |= SOUTH_EAST_WATER;
+        if (!rightWater && !upWater && isTransitionTile(layer, c + 1, r - 1, rows, cols))
+            mask |= NORTH_EAST_WATER;
 
         return mask;
     }
 
-    private static boolean isWater(int[][] layer, int c, int r, int rows, int cols) {
+    private static boolean isTransitionTile(int[][] layer, int c, int r, int rows, int cols) {
         if (c < 0 || c >= cols || r < 0 || r >= rows) {
             return true; // Out of bounds coi như là nước
         }
         int id = layer[r][c];
-        return id == Tile.WATER.getId() || id == Tile.WATER_EDGE.getId();
+        return id == Tile.WATER.getId()
+                || id == Tile.WATER_EDGE.getId()
+                || id == Tile.PATH.getId();
+    }
+
+    private static Image applyRoundedCorners(Image baseImage, int mask, boolean isDark) {
+        boolean hasOuterCorner = ((mask & UP_WATER) != 0 && (mask & LEFT_WATER) != 0)
+                || ((mask & UP_WATER) != 0 && (mask & RIGHT_WATER) != 0)
+                || ((mask & DOWN_WATER) != 0 && (mask & LEFT_WATER) != 0)
+                || ((mask & DOWN_WATER) != 0 && (mask & RIGHT_WATER) != 0);
+        boolean hasInnerCorner = (mask & ~CARDINAL_MASK) != 0;
+
+        if (!hasOuterCorner && !hasInnerCorner) {
+            return baseImage;
+        }
+
+        WritableImage composite = new WritableImage(TILE_SIZE, TILE_SIZE);
+        PixelWriter writer = composite.getPixelWriter();
+        var reader = baseImage.getPixelReader();
+
+        for (int x = 0; x < TILE_SIZE; x++) {
+            for (int y = 0; y < TILE_SIZE; y++) {
+                writer.setColor(x, y, reader.getColor(x, y));
+            }
+        }
+
+        Color outline = isDark ? Color.web("#4A8A28") : Color.web("#4A8A28");
+        Color shadow = isDark ? Color.web("#5A9A38") : Color.web("#5A9A38");
+
+        if ((mask & UP_WATER) != 0 && (mask & LEFT_WATER) != 0) {
+            carveOuterCorner(writer, outline, shadow, Corner.NORTH_WEST);
+        }
+        if ((mask & UP_WATER) != 0 && (mask & RIGHT_WATER) != 0) {
+            carveOuterCorner(writer, outline, shadow, Corner.NORTH_EAST);
+        }
+        if ((mask & DOWN_WATER) != 0 && (mask & LEFT_WATER) != 0) {
+            carveOuterCorner(writer, outline, shadow, Corner.SOUTH_WEST);
+        }
+        if ((mask & DOWN_WATER) != 0 && (mask & RIGHT_WATER) != 0) {
+            carveOuterCorner(writer, outline, shadow, Corner.SOUTH_EAST);
+        }
+
+        if ((mask & NORTH_WEST_WATER) != 0) {
+            carveInnerCorner(writer, outline, shadow, Corner.NORTH_WEST);
+        }
+        if ((mask & SOUTH_WEST_WATER) != 0) {
+            carveInnerCorner(writer, outline, shadow, Corner.SOUTH_WEST);
+        }
+        if ((mask & SOUTH_EAST_WATER) != 0) {
+            carveInnerCorner(writer, outline, shadow, Corner.SOUTH_EAST);
+        }
+        if ((mask & NORTH_EAST_WATER) != 0) {
+            carveInnerCorner(writer, outline, shadow, Corner.NORTH_EAST);
+        }
+
+        return composite;
+    }
+
+    private static void carveOuterCorner(PixelWriter writer, Color outline, Color shadow, Corner corner) {
+        for (int[] point : OUTER_CORNER_CUT) {
+            int[] transformed = transform(point[0], point[1], corner);
+            writer.setColor(transformed[0], transformed[1], Color.TRANSPARENT);
+        }
+
+        for (int[] point : OUTER_CORNER_OUTLINE) {
+            int[] transformed = transform(point[0], point[1], corner);
+            writer.setColor(transformed[0], transformed[1], outline);
+        }
+
+        for (int[] point : OUTER_CORNER_SHADOW) {
+            int[] transformed = transform(point[0], point[1], corner);
+            writer.setColor(transformed[0], transformed[1], shadow);
+        }
+    }
+
+    private static void carveInnerCorner(PixelWriter writer, Color outline, Color shadow, Corner corner) {
+        for (int[] point : INNER_CORNER_CUT) {
+            int[] transformed = transform(point[0], point[1], corner);
+            writer.setColor(transformed[0], transformed[1], Color.TRANSPARENT);
+        }
+
+        for (int[] point : INNER_CORNER_OUTLINE) {
+            int[] transformed = transform(point[0], point[1], corner);
+            writer.setColor(transformed[0], transformed[1], outline);
+        }
+
+        for (int[] point : INNER_CORNER_SHADOW) {
+            int[] transformed = transform(point[0], point[1], corner);
+            writer.setColor(transformed[0], transformed[1], shadow);
+        }
+    }
+
+    private static int[] transform(int x, int y, Corner corner) {
+        return switch (corner) {
+            case NORTH_WEST -> new int[] { x, y };
+            case NORTH_EAST -> new int[] { TILE_SIZE - 1 - x, y };
+            case SOUTH_WEST -> new int[] { x, TILE_SIZE - 1 - y };
+            case SOUTH_EAST -> new int[] { TILE_SIZE - 1 - x, TILE_SIZE - 1 - y };
+        };
+    }
+
+    private enum Corner {
+        NORTH_WEST,
+        NORTH_EAST,
+        SOUTH_WEST,
+        SOUTH_EAST
     }
 
     /**
@@ -138,7 +338,7 @@ public class GrassTile {
         Color base = isDark ? Color.web("#5A9A38") : Color.web("#7EC850");
         Color light = isDark ? Color.web("#6AB048") : Color.web("#8FD860");
         Color dark = isDark ? Color.web("#4A8A28") : Color.web("#6AB040");
-        
+
         // Autotile border colors
         Color outline = Color.web("#4A8A28"); // Dark green outline
         Color shadow = Color.web("#5A9A38"); // Dark shadow
@@ -155,22 +355,22 @@ public class GrassTile {
         pw.setColor(5, 6, light);
         pw.setColor(4, 7, light);
         pw.setColor(5, 7, light);
-        
+
         pw.setColor(20, 14, light);
         pw.setColor(21, 14, light);
         pw.setColor(20, 15, light);
         pw.setColor(21, 15, light);
-        
+
         pw.setColor(12, 24, dark);
         pw.setColor(13, 24, dark);
         pw.setColor(12, 25, dark);
         pw.setColor(13, 25, dark);
-        
+
         pw.setColor(26, 4, dark);
         pw.setColor(27, 4, dark);
         pw.setColor(26, 5, dark);
         pw.setColor(27, 5, dark);
-        
+
         pw.setColor(8, 18, light);
         pw.setColor(8, 19, light);
 
@@ -207,48 +407,6 @@ public class GrassTile {
                 pw.setColor(TILE_SIZE - 2, y, shadow);
                 pw.setColor(TILE_SIZE - 3, y, shadow);
             }
-        }
-
-        // 4. Draw Rounded Corners
-        if (upWater && leftWater) {
-            pw.setColor(0, 0, outline);
-            pw.setColor(1, 0, outline);
-            pw.setColor(0, 1, outline);
-            pw.setColor(2, 0, outline);
-            pw.setColor(0, 2, outline);
-            pw.setColor(1, 1, outline);
-            pw.setColor(2, 1, shadow);
-            pw.setColor(1, 2, shadow);
-        }
-        if (upWater && rightWater) {
-            pw.setColor(TILE_SIZE - 1, 0, outline);
-            pw.setColor(TILE_SIZE - 2, 0, outline);
-            pw.setColor(TILE_SIZE - 1, 1, outline);
-            pw.setColor(TILE_SIZE - 3, 0, outline);
-            pw.setColor(TILE_SIZE - 1, 2, outline);
-            pw.setColor(TILE_SIZE - 2, 1, outline);
-            pw.setColor(TILE_SIZE - 3, 1, shadow);
-            pw.setColor(TILE_SIZE - 2, 2, shadow);
-        }
-        if (downWater && leftWater) {
-            pw.setColor(0, TILE_SIZE - 1, outline);
-            pw.setColor(1, TILE_SIZE - 1, outline);
-            pw.setColor(0, TILE_SIZE - 2, outline);
-            pw.setColor(2, TILE_SIZE - 1, outline);
-            pw.setColor(0, TILE_SIZE - 3, outline);
-            pw.setColor(1, TILE_SIZE - 2, outline);
-            pw.setColor(2, TILE_SIZE - 2, shadow);
-            pw.setColor(1, TILE_SIZE - 3, shadow);
-        }
-        if (downWater && rightWater) {
-            pw.setColor(TILE_SIZE - 1, TILE_SIZE - 1, outline);
-            pw.setColor(TILE_SIZE - 2, TILE_SIZE - 1, outline);
-            pw.setColor(TILE_SIZE - 1, TILE_SIZE - 2, outline);
-            pw.setColor(TILE_SIZE - 3, TILE_SIZE - 1, outline);
-            pw.setColor(TILE_SIZE - 1, TILE_SIZE - 3, outline);
-            pw.setColor(TILE_SIZE - 2, TILE_SIZE - 2, outline);
-            pw.setColor(TILE_SIZE - 3, TILE_SIZE - 2, shadow);
-            pw.setColor(TILE_SIZE - 2, TILE_SIZE - 3, shadow);
         }
 
         return img;

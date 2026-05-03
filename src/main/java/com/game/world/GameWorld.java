@@ -99,13 +99,15 @@ public class GameWorld {
 
         dialogSystem.setOnQuestComplete((questId) -> {
             if (QuestSystem.FISHING_ROD_QUEST_ID.equals(questId)) {
-                // Unlock cat care, but only bring the cat close when the player explicitly calls it.
+                // Unlock cat care, but only bring the cat close when the player explicitly
+                // calls it.
                 cat.unlockCare(player);
                 showPickupNotification("🐱 Mèo con đã thân với bạn hơn! Nhấn C để gọi mèo lại gần.");
             } else if (QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
                 questResetTimers.put(QuestSystem.SEEDS_QUEST_ID, SEEDS_QUEST_RESET_DELAY_SECONDS);
                 InventorySystem.InventoryItem reward = inventorySystem.addRandomGardenReward();
-                showPickupNotification("🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "! Quest sẽ mở lại sau 3600 giây.");
+                showPickupNotification(
+                        "🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "! Quest sẽ mở lại sau 3600 giây.");
             }
         });
     }
@@ -118,68 +120,58 @@ public class GameWorld {
         NPC grandma = new NPC("Bà cụ bán rau", 17 * TileMap.TILE_SIZE, 3 * TileMap.TILE_SIZE,
                 NPC.DialogType.SIMPLE, "npc_grandma");
         grandma.setDialogData(DialogData.simple(
-            "Chào cháu! Đây là công viên Hồ Xanh đấy.",
-            "Bà bán rau ở đây lâu lắm rồi, cũng thấy nhiều người đến tập thể dục.",
-            "Cháu cứ đi dạo thoải mái nhé, cảnh ở đây đẹp lắm!",
-            "À, bà thấy có mấy bạn nhỏ câu cá dọc hồ, cháu đi thăm xem~"
-        ));
+                "Chào cháu! Đây là công viên Hồ Xanh đấy.",
+                "Bà bán rau ở đây lâu lắm rồi, cũng thấy nhiều người đến tập thể dục.",
+                "Cháu cứ đi dạo thoải mái nhé, cảnh ở đây đẹp lắm!",
+                "À, bà thấy có mấy bạn nhỏ câu cá dọc hồ, cháu đi thăm xem~"));
         npcs.add(grandma);
 
         // === Ông chú bán nước — Bên phải hồ ===
         NPC drinkSeller = new NPC("Ông chú bán nước", 22 * TileMap.TILE_SIZE, 13 * TileMap.TILE_SIZE,
                 NPC.DialogType.CHOICE, "npc_drink_seller");
         drinkSeller.setDialogData(DialogData.choice(
-            "Chào em! Anh bán nước giải khát đây. Em muốn uống gì nào?",
-            new DialogData.Choice("Trà sữa",
-                "Trà sữa trân châu đây! Ngọt ngào như nụ cười em vậy~ 🧋"),
-            new DialogData.Choice("Cà phê",
-                "Cà phê đen đá nhé! Uống xong tỉnh táo đi dạo tiếp! ☕"),
-            new DialogData.Choice("Nước cam",
-                "Nước cam tươi mát lành! Bổ sung vitamin C nè~ 🍊")
-        ));
+                "Chào em! Anh bán nước giải khát đây. Em muốn uống gì nào?",
+                new DialogData.Choice("Trà sữa",
+                        "Trà sữa trân châu đây! Ngọt ngào như nụ cười em vậy~ 🧋"),
+                new DialogData.Choice("Cà phê",
+                        "Cà phê đen đá nhé! Uống xong tỉnh táo đi dạo tiếp! ☕"),
+                new DialogData.Choice("Nước cam",
+                        "Nước cam tươi mát lành! Bổ sung vitamin C nè~ 🍊")));
         npcs.add(drinkSeller);
 
         // === Bạn nhỏ câu cá — Dọc hồ dưới ===
         NPC fisherKid = new NPC("Bạn nhỏ câu cá", 18 * TileMap.TILE_SIZE, 20 * TileMap.TILE_SIZE,
                 NPC.DialogType.QUEST, "npc_fisher_kid");
         fisherKid.setDialogData(DialogData.quest(
-            List.of(
-                "Huhu... Anh/chị ơi cứu em với!",
-                "Em đang câu cá ở đây thì bị mất cần câu rồi...",
-                "Hình như nó rơi đâu đó trong công viên.",
-                "Anh/chị giúp em tìm được không? 🥺"
-            ),
-            List.of(
-                "Anh/chị tìm được cần câu chưa ạ?",
-                "Em chỉ nhớ là mình chạy khắp công viên thôi..."
-            ),
-            List.of(
-                "Ôi cần câu của em! Cảm ơn anh/chị nhiều lắm! 🎉",
-                "Để em tặng anh/chị con mèo nhỏ này nhé~",
-                "Nó cứ đi theo em hoài, giờ nó sẽ theo anh/chị!"
-            )
-        ));
+                List.of(
+                        "Huhu... Anh/chị ơi cứu em với!",
+                        "Em đang câu cá ở đây thì bị mất cần câu rồi...",
+                        "Hình như nó rơi đâu đó trong công viên.",
+                        "Anh/chị giúp em tìm được không? 🥺"),
+                List.of(
+                        "Anh/chị tìm được cần câu chưa ạ?",
+                        "Em chỉ nhớ là mình chạy khắp công viên thôi..."),
+                List.of(
+                        "Ôi cần câu của em! Cảm ơn anh/chị nhiều lắm! 🎉",
+                        "Để em tặng anh/chị con mèo nhỏ này nhé~",
+                        "Nó cứ đi theo em hoài, giờ nó sẽ theo anh/chị!")));
         npcs.add(fisherKid);
 
         // === Bác làm vườn — Góc dưới bên trái ===
         NPC gardener = new NPC("Bác làm vườn", 5 * TileMap.TILE_SIZE, 25 * TileMap.TILE_SIZE,
                 NPC.DialogType.QUEST, Constants.KEY_NPC_GARDENER);
         gardener.setDialogData(DialogData.quest(
-            QuestSystem.SEEDS_QUEST_ID,
-            List.of(
-                "Chào cháu, bác đang chăm vườn hoa ở góc này.",
-                "Sáng nay bác làm rơi túi hạt giống khi đi dạo quanh công viên.",
-                "Cháu giúp bác tìm lại túi hạt giống được không?"
-            ),
-            List.of(
-                "Cháu tìm thấy túi hạt giống của bác chưa?",
-                "Bác chỉ nhớ là đã mang nó đi khắp công viên thôi."
-            ),
-            List.of(
-                "Đúng là túi hạt giống của bác rồi!",
-                "Cảm ơn cháu nhé, vườn hoa sắp có thêm nhiều mầm mới."
-            )
-        ));
+                QuestSystem.SEEDS_QUEST_ID,
+                List.of(
+                        "Chào cháu, bác đang chăm vườn hoa ở góc này.",
+                        "Sáng nay bác làm rơi túi hạt giống khi đi dạo quanh công viên.",
+                        "Cháu giúp bác tìm lại túi hạt giống được không?"),
+                List.of(
+                        "Cháu tìm thấy túi hạt giống của bác chưa?",
+                        "Bác chỉ nhớ là đã mang nó đi khắp công viên thôi."),
+                List.of(
+                        "Đúng là túi hạt giống của bác rồi!",
+                        "Cảm ơn cháu nhé, vườn hoa sắp có thêm nhiều mầm mới.")));
         npcs.add(gardener);
     }
 
@@ -245,11 +237,11 @@ public class GameWorld {
         }
 
         if (QuestSystem.FISHING_ROD_QUEST_ID.equals(itemId)) {
-            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+            return tile == Tile.GRASS || tile == Tile.FLOWER;
         }
 
         if (QuestSystem.SEEDS_QUEST_ID.equals(itemId)) {
-            return tile == Tile.GRASS || tile == Tile.DARK_GRASS || tile == Tile.FLOWER;
+            return tile == Tile.GRASS || tile == Tile.FLOWER;
         }
 
         return false;
@@ -348,7 +340,8 @@ public class GameWorld {
             if (cat.callToPlayer(player)) {
                 showPickupNotification("🐱 Mèo đang chạy lại gần bạn!");
             } else {
-                showPickupNotification("🐱 Mèo vừa phản hồi rồi, chờ " + formatCooldown(cat.getCallCooldownRemaining()) + ".");
+                showPickupNotification(
+                        "🐱 Mèo vừa phản hồi rồi, chờ " + formatCooldown(cat.getCallCooldownRemaining()) + ".");
             }
         }
 
@@ -381,7 +374,8 @@ public class GameWorld {
             if (cat.pet(player)) {
                 showHeartProgressNotification("😺 Bạn vuốt ve mèo. Mood +5!", previousHeartLevel);
             } else {
-                showPickupNotification("🐱 Mèo đang lim dim rồi, chờ " + formatCooldown(cat.getPetCooldownRemaining()) + ".");
+                showPickupNotification(
+                        "🐱 Mèo đang lim dim rồi, chờ " + formatCooldown(cat.getPetCooldownRemaining()) + ".");
             }
         }
 
@@ -513,10 +507,10 @@ public class GameWorld {
 
         // Quest indicator
         dialogSystem.renderQuestIndicator(
-            gc,
-            questResetTimers,
-            SEEDS_QUEST_RESET_DELAY_SECONDS,
-            SEEDS_QUEST_COMPLETION_BANNER_SECONDS);
+                gc,
+                questResetTimers,
+                SEEDS_QUEST_RESET_DELAY_SECONDS,
+                SEEDS_QUEST_COMPLETION_BANNER_SECONDS);
 
         // Fishing indicator 'F'
         if (canStartFishing()) {
@@ -576,14 +570,16 @@ public class GameWorld {
     }
 
     private void renderPickupNotification(GraphicsContext gc) {
-        if (pickupNotification == null) return;
+        if (pickupNotification == null)
+            return;
 
         double alpha = Math.max(0.0, Math.min(1.0, pickupTimer));
         double w = Constants.WINDOW_WIDTH;
 
         // Slide in from top
         double slideY = pickupTimer > 2.5 ? (3.0 - pickupTimer) * 100 : 50;
-        if (pickupTimer < 0.5) slideY = pickupTimer * 100;
+        if (pickupTimer < 0.5)
+            slideY = pickupTimer * 100;
 
         double textWidth = pickupNotification.length() * 8;
         double boxX = w / 2 - textWidth / 2 - 15;
@@ -612,7 +608,7 @@ public class GameWorld {
                 player.getX(),
                 player.getY(),
                 player.getDirection(),
-            java.time.Instant.now().getEpochSecond(),
+                java.time.Instant.now().getEpochSecond(),
                 questSystem.getQuestStatesSnapshot(),
                 new LinkedHashMap<>(questResetTimers),
                 questSystem.getCollectedItemsSnapshot(),
@@ -646,7 +642,8 @@ public class GameWorld {
         boolean catUnlocked = saveData.catUnlocked() || questSystem.isQuestCompleted(QuestSystem.FISHING_ROD_QUEST_ID);
         int catMood = saveData.catUnlocked() ? saveData.catMood() : (catUnlocked ? 60 : 0);
         int catAffection = saveData.catUnlocked() ? saveData.catAffection() : 0;
-        cat.restoreProgressState(player, catUnlocked, saveData.catX(), saveData.catY(), saveData.catState(), catMood, catAffection);
+        cat.restoreProgressState(player, catUnlocked, saveData.catX(), saveData.catY(), saveData.catState(), catMood,
+                catAffection);
 
         syncQuestItemsFromProgress(saveData.questItemPositions());
 
@@ -713,7 +710,8 @@ public class GameWorld {
     }
 
     private void renderCatInteractionHint(GraphicsContext gc, double camX, double camY) {
-        if (!cat.isCareUnlocked() || inventoryOpen || catCareOpen || dialogSystem.isActive() || fishingMiniGame.isActive()) {
+        if (!cat.isCareUnlocked() || inventoryOpen || catCareOpen || dialogSystem.isActive()
+                || fishingMiniGame.isActive()) {
             return;
         }
         if (!cat.isPlayerNearForCare(player)) {
@@ -729,7 +727,8 @@ public class GameWorld {
         renderKeyIndicator(gc, firstIndicatorX + badgeSize + gap, indicatorY, "C", 5);
     }
 
-    private void renderKeyIndicator(GraphicsContext gc, double indicatorX, double indicatorY, String key, double textOffsetX) {
+    private void renderKeyIndicator(GraphicsContext gc, double indicatorX, double indicatorY, String key,
+            double textOffsetX) {
         gc.setFill(Color.web("#000000", 0.6));
         gc.fillRoundRect(indicatorX, indicatorY, 20, 20, 4, 4);
         gc.setStroke(Color.web("#FFFFFF", 0.8));
@@ -955,7 +954,8 @@ public class GameWorld {
 
         if (input.isKeyJustPressed(KeyCode.ENTER)) {
             if (!cat.canFeed()) {
-                showPickupNotification("🐱 Mèo vẫn còn no, chờ " + formatCooldown(cat.getFeedCooldownRemaining()) + ".");
+                showPickupNotification(
+                        "🐱 Mèo vẫn còn no, chờ " + formatCooldown(cat.getFeedCooldownRemaining()) + ".");
                 return;
             }
 
@@ -974,7 +974,8 @@ public class GameWorld {
                 return;
             }
 
-            showHeartProgressNotification("🐟 Mèo ăn " + selectedFish.getDisplayName() + " ngon lành! Mood +15!", previousHeartLevel);
+            showHeartProgressNotification("🐟 Mèo ăn " + selectedFish.getDisplayName() + " ngon lành! Mood +15!",
+                    previousHeartLevel);
             clampCatCareSelection();
         }
     }
@@ -1011,10 +1012,27 @@ public class GameWorld {
     }
 
     // Getters for MapOverlay
-    public boolean isGirl() { return isGirl; }
-    public TileMap getTileMap() { return tileMap; }
-    public Player getPlayer() { return player; }
-    public List<NPC> getNPCs() { return npcs; }
-    public List<Item> getItems() { return items; }
-    public CatFollower getCat() { return cat; }
+    public boolean isGirl() {
+        return isGirl;
+    }
+
+    public TileMap getTileMap() {
+        return tileMap;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public List<NPC> getNPCs() {
+        return npcs;
+    }
+
+    public List<Item> getItems() {
+        return items;
+    }
+
+    public CatFollower getCat() {
+        return cat;
+    }
 }

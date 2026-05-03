@@ -74,8 +74,8 @@ Esc                 : Quay lại Character Selection
 Continue / New Game Screen
     │
     ├─ Continue
-   │  ├─ Nếu giới tính đã chọn chưa có save: báo lỗi và ở lại màn hình này
-   │  └─ Nếu có save: load slot của Girl/Boy đã chọn rồi vào gameplay
+    │  ├─ Nếu giới tính đã chọn chưa có save: báo lỗi và ở lại màn hình này
+    │  └─ Nếu có save: load slot của Girl/Boy đã chọn rồi vào gameplay
     │
     └─ New Game
       └─ Khởi tạo phiên mới theo giới tính đã chọn rồi vào gameplay
@@ -302,7 +302,7 @@ Player gần NPC (trong interactionRadius)
     │
     ├─ Hiển thị visual indicator ("!" hoặc "...")
     │
-   └─ Người chơi bấm Enter
+    └─ Người chơi bấm Enter
        │
        └─► DialogSystem.startDialog(npc, dialogData)
            ├─ State: INACTIVE → SHOWING_TEXT
@@ -449,11 +449,11 @@ Item (Fishing Rod / Seeds) Object
     │ (visible = false, tồn tại trên map nhưng không render)
     │
     ├─ Quest tương ứng ACTIVE
-   │ ├─ Chọn ngẫu nhiên 1 tile hợp lệ trên toàn bộ map
-   │ └─ visible = true (render sprite item)
-   │
-   ├─ Continue / Load khi quest vẫn ACTIVE
-   │ └─ Khôi phục lại đúng tọa độ spawn đã save trước đó
+    │ ├─ Chọn ngẫu nhiên 1 tile hợp lệ trên toàn bộ map
+    │ └─ visible = true (render sprite item)
+    │
+    ├─ Continue / Load khi quest vẫn ACTIVE
+    │ └─ Khôi phục lại đúng tọa độ spawn đã save trước đó
     │
     └─► Player.update() → Check collision với Item.getBounds()
         │
@@ -494,7 +494,7 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
 ```
 InventorySystem
     ├─ Lưu trong memory theo phiên chơi hiện tại
-   ├─ Chứa cả reward cây/hoa và cá câu được
+    ├─ Chứa cả reward cây/hoa và cá câu được
     ├─ Không ghi file save/load
     ├─ Restart game/app → inventory trống lại
     └─ Hoàn thành quest hạt giống trong lần chơi mới → reward random lại
@@ -517,7 +517,7 @@ Người chơi nhấn I
     └─ inventoryOpen = true
        │
        ├─ Render panel "Kho lưu trữ"
-      ├─ Hiển thị icon, tên cây/hoa/cá, số lượng
+       ├─ Hiển thị icon, tên cây/hoa/cá, số lượng
        ├─ Nếu chưa có item: "Chưa có vật phẩm nào"
        └─ I hoặc Esc → đóng overlay
 ```
@@ -595,19 +595,19 @@ CatFollower.update(dt, player)
     │
     ├─ Nếu state = IDLE: Bỏ qua
     │
-   ├─ Nếu state = WAITING:
-   │  └─ Giữ vị trí hiện tại, chờ Player bấm `C`
-   │
-   └─ Nếu state = CALLING:
+    ├─ Nếu state = WAITING:
+    │  └─ Giữ vị trí hiện tại, chờ Player bấm `C`
+    │
+    └─ Nếu state = CALLING:
        │
-      ├─ Lấy vị trí neo cạnh Player
-      ├─ Tính direction → target
+       ├─ Lấy vị trí neo cạnh Player
+       ├─ Tính direction → target
        │
-      ├─ Di chuyển nhanh về gần Player
+       ├─ Di chuyển nhanh về gần Player
        │
        ├─ Cập nhật animation frame
        │
-      └─ Khi đủ gần: state quay lại WAITING
+       └─ Khi đủ gần: state quay lại WAITING
 ```
 
    ### Quy Trình Cho Ăn
@@ -659,7 +659,7 @@ Camera.update(player, gameWorld)
 GrassTile.render(gc, groundLayer, col, row, x, y)
     │
     ├─ Tính bitmask 4-hướng (Lên, Phải, Xuống, Trái)
-    │  └─ Kiểm tra tile xung quanh có phải là WATER / WATER_EDGE không (Out of bounds coi như Water)
+    │  └─ Kiểm tra tile xung quanh có phải là WATER / WATER_EDGE / PATH không (Out of bounds coi như Water)
     │  └─ Bitmask: (LEFT_WATER ? 1 : 0) | (DOWN_WATER ? 2 : 0) | (RIGHT_WATER ? 4 : 0) | (UP_WATER ? 8 : 0)
     │
     ├─ Lấy texture từ cache (16 biến thể)
@@ -670,11 +670,15 @@ GrassTile.render(gc, groundLayer, col, row, x, y)
     │  │     0011 (3)  0010 (2)  0110 (6)  0111 (7)
     │  │     1011 (11) 1010 (10) 1110 (14) 1111 (15)
     │  │
+    │  ├─ Nếu file `grass_autotile_extended.png` / `dark_grass_autotile_extended.png` tồn tại:
+    │  │  └─ Chỉ dùng hàng đầu tiên của spritesheet để lấy 16 biến thể cardinal cơ bản.
+    │  │  └─ Không còn dùng diagonal mask để bo góc tile cỏ quanh hồ nước hoặc PATH.
+    │  │
     │  ├─ Nếu KHÔNG có file (Fallback):
     │  │  └─ Tự động sinh pixel art bằng code.
-    │  │  └─ Thêm viền tối (Shadow) và bo góc khi tiếp xúc WATER.
+    │  │  └─ Thêm viền tối (Shadow) theo cạnh tiếp xúc, không bo góc chéo.
     │  │
-    │  └─ Render tile cỏ đã có hiệu ứng lên map thay vì dùng tile tĩnh
+    │  └─ Render tile cỏ với cạnh thẳng quanh WATER / WATER_EDGE / PATH thay vì cắt góc bo tròn
 ```
 
 ---
@@ -789,7 +793,7 @@ Player.update():
     │  ├─ Check if Player.interactionBounds
     │     overlaps with NPC.bounds
     │  │
-   │  └─ If overlap + Enter pressed:
+    │  └─ If overlap + Enter pressed:
     │     └─ startDialog(npc)
 
 // 3. Player vs Cat Care Interaction
@@ -936,8 +940,8 @@ Main.java
         │   ├─ Camera
         │   ├─ DialogSystem
         │   ├─ QuestSystem
-      │   ├─ InventorySystem (runtime rewards + fish)
-      │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
+        │   ├─ InventorySystem (runtime rewards + fish)
+        │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
             │
             ├─► SaveSystem
             │   ├─ Properties files `save-girl.properties` / `save-boy.properties`
@@ -1005,7 +1009,7 @@ Optimization Techniques:
      [GAMEPLAY]
             │
             ├─ Player moves (Input: WASD)
-         │
+            │
             ├─ Encounter NPC (Input: Enter)
             │
             ├─► [DIALOG]
@@ -1052,7 +1056,7 @@ Optimization Techniques:
             │         ├─ Show fish inventory for feeding
             │         └─ C/Esc closes overlay
             │
-              └─ Exit game
+            └─ Exit game
                  └─ auto save current gender slot
 ```
 
@@ -1155,8 +1159,8 @@ src/main/java/com/game/
     │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
     │   ├─ update(dt, inputHandler)
     │   ├─ render(gc)
-   │   ├─ renderInventoryOverlay(gc)
-   │   └─ renderCatCareOverlay(gc)
+    │   ├─ renderInventoryOverlay(gc)
+    │   └─ renderCatCareOverlay(gc)
     │
     ├── Tile.java (enum)
     │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
@@ -1180,14 +1184,18 @@ AssetManager.loadAll()
     │   ├─ Boy: kiểm tra src/main/resources/assets/player2.png
     │   ├─ Nếu file tương ứng không tồn tại: fallback gọi PixelArtGenerator.generatePlayerSheet(isGirl)
     │
-   ├─► Character Selection Screen gọi AssetManager.getPlayerPreview(isGirl)
-   │   ├─ Ưu tiên load ảnh preview riêng từ player_preview.png / player2_preview.png
-   │   ├─ Nếu thiếu preview asset: fallback về frame idle nhìn xuống từ player.png / player2.png
-   │   └─ Không đánh dấu loadAll() đã hoàn tất, nên vào game vẫn load đúng spritesheet theo lựa chọn
+    ├─► Character Selection Screen gọi AssetManager.getPlayerPreview(isGirl)
+    │   ├─ Ưu tiên load ảnh preview riêng từ player_preview.png / player2_preview.png
+    │   ├─ Nếu thiếu preview asset: fallback về frame idle nhìn xuống từ player.png / player2.png
+    │   └─ Không đánh dấu loadAll() đã hoàn tất, nên vào game vẫn load đúng spritesheet theo lựa chọn
     │
     ├─► Các asset khác kiểm tra file ảnh trong src/main/resources/assets/ (vd: tiles.png, cat.png)
     │   ├─ Nếu TỒN TẠI: Load Image từ file (Cho phép thay đổi giao diện không cần code)
     │   └─ Nếu KHÔNG TỒN TẠI: Fallback gọi PixelArtGenerator tạo hình mặc định
+    │
+    ├─► Grass autotile hỗ trợ 2 mức custom asset
+    │   ├─ `grass_autotile.png` / `dark_grass_autotile.png`: spritesheet 4x4 cho 16 biến thể cardinal cơ bản
+    │   └─ `grass_autotile_extended.png` / `dark_grass_autotile_extended.png`: spritesheet lớn hơn, hiện chỉ đọc hàng đầu tiên cho 16 biến thể cardinal cơ bản
     │
     └─► Đưa Image/SpriteSheet vào bộ nhớ (HashMap) để sử dụng
 ```
@@ -1243,8 +1251,8 @@ Thắng:
     ├─ Nếu currentValue >= 100 trong vòng 7 giây
     ├─ InventorySystem.addRandomFishReward()
     ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
-   ├─ Cá được lưu trong inventory runtime
-   ├─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
+    ├─ Cá được lưu trong inventory runtime
+    ├─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
     └─ PlayerState: FISHING → NORMAL
 
 Thua:

@@ -31,9 +31,10 @@ public class GameApplicationTest {
     }
 
     @BeforeEach
-    public void init() {
+    public void init() throws Exception {
         app = new GameApplication();
         input = InputHandler.getInstance();
+        setPrivateField(app, "inputHandler", input);
         resetInputState();
     }
 

@@ -25,6 +25,7 @@ public class Player extends Entity {
 
     private int direction = 0; // 0=down, 1=left, 2=right, 3=up
     private boolean moving = false;
+    private boolean movedThisFrame = false;
     private PlayerState state = PlayerState.NORMAL;
     private SpriteSheet spriteSheet;
     private TileMap tileMap;
@@ -58,10 +59,13 @@ public class Player extends Entity {
     public void handleInput(double dt, InputHandler input) {
         if (state == PlayerState.FISHING) {
             moving = false;
+            movedThisFrame = false;
             return;
         }
 
         double dx = 0, dy = 0;
+        double startX = x;
+        double startY = y;
 
         if (input.isKeyDown(KeyCode.W) || input.isKeyDown(KeyCode.UP)) {
             dy = -1;
@@ -88,6 +92,7 @@ public class Player extends Entity {
         }
 
         moving = (dx != 0 || dy != 0);
+        movedThisFrame = false;
 
         if (moving) {
             double newX = x + dx * SPEED * dt;
@@ -106,6 +111,8 @@ public class Player extends Entity {
             if (checkMapCollision()) {
                 y = oldY;
             }
+
+            movedThisFrame = Double.compare(startX, x) != 0 || Double.compare(startY, y) != 0;
         }
 
         // Update position history for cat follow
@@ -212,6 +219,7 @@ public class Player extends Entity {
         this.direction = Math.max(0, Math.min(3, direction));
         this.state = PlayerState.NORMAL;
         this.moving = false;
+        this.movedThisFrame = false;
         this.currentFrame = 0;
         this.frameTimer = 0;
         resetPositionHistory();
@@ -234,6 +242,7 @@ public class Player extends Entity {
         this.state = state;
         if (state == PlayerState.FISHING) {
             moving = false;
+            movedThisFrame = false;
             currentFrame = 0;
             frameTimer = 0;
             updateSprite();
@@ -241,4 +250,5 @@ public class Player extends Entity {
     }
     public int getDirection() { return direction; }
     public boolean isMoving() { return moving; }
+    public boolean didMoveThisFrame() { return movedThisFrame; }
 }

@@ -1,5 +1,6 @@
 package com.game.dialog;
 
+import com.game.audio.AudioManager;
 import com.game.core.InputHandler;
 import com.game.entity.NPC;
 import com.game.util.Constants;
@@ -53,6 +54,7 @@ public class DialogSystem {
     private QuestSystem questSystem;
     private Consumer<String> onQuestStart;
     private Consumer<String> onQuestComplete;
+    private final AudioManager audioManager = AudioManager.getInstance();
 
     public DialogSystem(QuestSystem questSystem) {
         this.questSystem = questSystem;
@@ -97,6 +99,7 @@ public class DialogSystem {
         }
 
         displayText = currentLines.get(0);
+        audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_OPEN);
     }
 
     /**
@@ -110,6 +113,7 @@ public class DialogSystem {
                 // If text is still typing, skip to full
                 if (charIndex < displayText.length()) {
                     charIndex = displayText.length();
+                    audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
                     return;
                 }
 
@@ -122,6 +126,7 @@ public class DialogSystem {
                         // Show choices
                         state = State.SHOWING_CHOICES;
                         selectedChoice = 0;
+                        audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
                     } else if (currentDialog.getType() == DialogData.Type.QUEST) {
                         handleQuestEnd();
                         closeDialog();
@@ -133,10 +138,12 @@ public class DialogSystem {
                     displayText = currentLines.get(currentLineIndex);
                     charIndex = 0;
                     charTimer = 0;
+                    audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
                 }
             }
         } else if (state == State.SHOWING_CHOICES) {
             List<DialogData.Choice> choices = currentDialog.getChoices();
+            int previousChoice = selectedChoice;
 
             if (input.isKeyJustPressed(KeyCode.UP) || input.isKeyJustPressed(KeyCode.W)) {
                 selectedChoice = Math.max(0, selectedChoice - 1);
@@ -148,11 +155,16 @@ public class DialogSystem {
             if (input.isKeyJustPressed(KeyCode.DIGIT2) && choices.size() > 1) selectedChoice = 1;
             if (input.isKeyJustPressed(KeyCode.DIGIT3) && choices.size() > 2) selectedChoice = 2;
 
+            if (selectedChoice != previousChoice) {
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
+            }
+
             if (input.isKeyJustPressed(KeyCode.SPACE) || input.isKeyJustPressed(KeyCode.ENTER)) {
                 // Select choice and show response
                 DialogData.Choice choice = choices.get(selectedChoice);
                 choiceResponse = choice.response;
                 showingChoiceResponse = true;
+                audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
 
                 // Switch to showing the response
                 currentLines = List.of(choiceResponse);
@@ -184,6 +196,9 @@ public class DialogSystem {
      * Đóng dialog.
      */
     private void closeDialog() {
+        if (state != State.INACTIVE) {
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
+        }
         state = State.INACTIVE;
         currentNPC = null;
         currentDialog = null;

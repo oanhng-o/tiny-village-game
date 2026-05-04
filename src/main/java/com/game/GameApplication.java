@@ -1,9 +1,13 @@
 package com.game;
 
+import com.game.audio.AudioManager;
+import com.game.audio.AudioSettings;
+import com.game.audio.AudioSettingsStore;
 import com.game.core.GameLoop;
 import com.game.core.InputHandler;
 import com.game.save.SaveData;
 import com.game.save.SaveSystem;
+import com.game.ui.AudioSettingsOverlay;
 import com.game.util.AssetManager;
 import com.game.util.Constants;
 import com.game.world.GameWorld;
@@ -41,12 +45,16 @@ public class GameApplication extends Application {
     private GameWorld gameWorld;
     private InputHandler inputHandler;
     private final SaveSystem saveSystem = new SaveSystem();
+    private final AudioSettingsStore audioSettingsStore = new AudioSettingsStore();
+    private final AudioSettingsOverlay audioSettingsOverlay = new AudioSettingsOverlay();
+    private final AudioManager audioManager = AudioManager.getInstance();
 
     private FrontScreenState frontScreenState = FrontScreenState.CHARACTER_SELECT;
     private TitleOption titleSelection = TitleOption.NEW_GAME;
     private int selectedOption = 0; // 0 = girl, 1 = boy
     private String titleStatusMessage = null;
     private String characterSelectStatusMessage = null;
+    private AudioSettings audioSettings;
 
     @Override
     public void start(Stage primaryStage) {
@@ -66,6 +74,10 @@ public class GameApplication extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
+        audioSettings = audioSettingsStore.load();
+        audioManager.initialize(audioSettings);
+        audioManager.playMusicEvent(Constants.AUDIO_EVENT_MENU_MUSIC);
+
         titleSelection = saveSystem.hasSave(true) ? TitleOption.CONTINUE : TitleOption.NEW_GAME;
         startFrontScreenLoop();
     }
@@ -73,12 +85,14 @@ public class GameApplication extends Application {
     @Override
     public void stop() {
         autoSaveCurrentProgress();
+        audioSettingsStore.save(audioSettings);
         if (gameLoop != null) {
             gameLoop.stop();
         }
         if (inputHandler != null) {
             inputHandler.reset();
         }
+        audioManager.shutdown();
     }
 
     private void autoSaveCurrentProgress() {
@@ -110,12 +124,34 @@ public class GameApplication extends Application {
                 bounceTimer += dt;
 
                 Runnable launchAction = null;
+                if (inputHandler.isKeyJustPressed(KeyCode.P)) {
+                    toggleAudioSettingsOverlay();
+                }
+
                 if (frontScreenState == FrontScreenState.TITLE) {
-                    launchAction = handleTitleScreenInput();
+                    if (!audioSettingsOverlay.isOpen()) {
+                        launchAction = handleTitleScreenInput();
+                    }
                     renderTitleScreen(bounceTimer);
                 } else {
-                    handleCharacterSelectInput();
+                    if (!audioSettingsOverlay.isOpen()) {
+                        handleCharacterSelectInput();
+                    }
                     renderCharacterSelect(bounceTimer);
+                }
+
+                if (audioSettingsOverlay.isOpen()) {
+                    boolean wasOpen = true;
+                    audioSettingsOverlay.handleInput(inputHandler, audioSettings, GameApplication.this::applyAudioSettings);
+                    if (wasOpen && !audioSettingsOverlay.isOpen()) {
+                        persistAudioSettings();
+                    }
+                    if (audioSettingsOverlay.isOpen()) {
+                        audioSettingsOverlay.render(gc);
+                        audioSettingsOverlay.renderRows(gc, audioSettings);
+                    }
+                    inputHandler.update();
+                    return;
                 }
 
                 inputHandler.update();
@@ -135,14 +171,19 @@ public class GameApplication extends Application {
         if (inputHandler.isKeyJustPressed(KeyCode.ESCAPE)) {
             frontScreenState = FrontScreenState.CHARACTER_SELECT;
             titleStatusMessage = null;
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
             return null;
         }
 
+        TitleOption previousSelection = titleSelection;
         if (inputHandler.isKeyJustPressed(KeyCode.UP) || inputHandler.isKeyJustPressed(KeyCode.W)) {
             titleSelection = TitleOption.CONTINUE;
         }
         if (inputHandler.isKeyJustPressed(KeyCode.DOWN) || inputHandler.isKeyJustPressed(KeyCode.S)) {
             titleSelection = TitleOption.NEW_GAME;
+        }
+        if (titleSelection != previousSelection) {
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
         }
 
         if (!inputHandler.isKeyJustPressed(KeyCode.ENTER) && !inputHandler.isKeyJustPressed(KeyCode.SPACE)) {
@@ -159,20 +200,26 @@ public class GameApplication extends Application {
             }
             titleStatusMessage = null;
             characterSelectStatusMessage = null;
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
             return () -> loadSavedGame(saveData);
         }
 
         titleStatusMessage = null;
         characterSelectStatusMessage = null;
+        audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
         return () -> startGame(isGirl);
     }
 
     private void handleCharacterSelectInput() {
+        int previousOption = selectedOption;
         if (inputHandler.isKeyJustPressed(KeyCode.LEFT) || inputHandler.isKeyJustPressed(KeyCode.A)) {
             selectedOption = 0;
         }
         if (inputHandler.isKeyJustPressed(KeyCode.RIGHT) || inputHandler.isKeyJustPressed(KeyCode.D)) {
             selectedOption = 1;
+        }
+        if (selectedOption != previousOption) {
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_DIALOG_ADVANCE);
         }
         if (!inputHandler.isKeyJustPressed(KeyCode.ENTER) && !inputHandler.isKeyJustPressed(KeyCode.SPACE)) {
             return;
@@ -182,6 +229,7 @@ public class GameApplication extends Application {
         titleStatusMessage = null;
         characterSelectStatusMessage = null;
         frontScreenState = FrontScreenState.TITLE;
+        audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
     }
 
     private void renderTitleScreen(double bounceTimer) {
@@ -378,7 +426,7 @@ public class GameApplication extends Application {
 
     private GameWorld createGameWorld(boolean isGirl) {
         AssetManager.getInstance().reset();
-        return new GameWorld(isGirl);
+        return new GameWorld(isGirl, audioSettings, audioSettingsStore);
     }
 
     private void launchGameWorld(GameWorld world) {
@@ -388,6 +436,28 @@ public class GameApplication extends Application {
         inputHandler.reset();
         gameWorld = world;
         gameLoop = new GameLoop(gc, gameWorld, inputHandler);
+        audioManager.playMusicEvent(Constants.AUDIO_EVENT_GAMEPLAY_MUSIC);
         gameLoop.start();
+    }
+
+    private void toggleAudioSettingsOverlay() {
+        if (audioSettingsOverlay.isOpen()) {
+            audioSettingsOverlay.close();
+            persistAudioSettings();
+            audioManager.playSfxEvent(Constants.AUDIO_EVENT_BACK);
+            return;
+        }
+
+        audioSettingsOverlay.open();
+        audioManager.playSfxEvent(Constants.AUDIO_EVENT_CONFIRM);
+    }
+
+    private void applyAudioSettings() {
+        audioManager.applySettings(audioSettings);
+    }
+
+    private void persistAudioSettings() {
+        applyAudioSettings();
+        audioSettingsStore.save(audioSettings);
     }
 }

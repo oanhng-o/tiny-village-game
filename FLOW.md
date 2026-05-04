@@ -25,6 +25,8 @@ Tiny Village là một game 2D pixel art được phát triển bằng **Java 17
 │  GameApplication.start(Stage)               │
 │  - Tạo Canvas 800x600 px                    │
 │  - Khởi tạo InputHandler + SaveSystem       │
+│  - Load AudioSettingsStore + AudioManager   │
+│  - Phát menu_theme.mp3 cho front screens    │
 │  - Hiển thị Character Selection             │
 │  - Chọn Girl / Boy                          │
 │  - Sau đó mới hiện Continue / New Game      │
@@ -47,10 +49,11 @@ Character Selection Screen
 ```
 %USERPROFILE%/.tiny-village-game/
    ├─ save-girl.properties
-   └─ save-boy.properties
+   ├─ save-boy.properties
+   └─ settings.properties
 ```
 
-Mỗi giới tính có một slot save riêng. Continue sẽ tải slot của nhân vật đã chọn trước đó, còn auto-save khi thoát sẽ ghi đè slot đúng với giới tính của world hiện tại.
+Mỗi giới tính có một slot save riêng. Continue sẽ tải slot của nhân vật đã chọn trước đó, còn auto-save khi thoát sẽ ghi đè slot đúng với giới tính của world hiện tại. Audio settings dùng file chung `settings.properties`, không gắn với slot Girl/Boy.
 
 ---
 
@@ -67,18 +70,26 @@ Mỗi giới tính có một slot save riêng. Continue sẽ tải slot của nh
 ↑ / ↓ hoặc W / S    : Chuyển giữa Continue và New Game
 Enter / Space       : Xác nhận lựa chọn
 Esc                 : Quay lại Character Selection
+P                   : Mở / đóng Audio Settings
 ```
+
+### Âm Thanh Front Screen
+- Character Selection và Continue / New Game dùng chung BGM `menu_theme.mp3`.
+- Di chuyển lựa chọn dùng `dialog_advance.wav` để giữ cảm giác tương tác nhẹ.
+- Xác nhận bằng `Enter`/`Space` dùng `ui_confirm.wav`.
+- `Esc` từ Continue / New Game quay lại Character Selection dùng `ui_back.wav`.
+- `P` mở Audio Settings overlay trên front screen; khi overlay đang mở thì input menu bên dưới bị chặn cho tới khi đóng.
 
 ### Quy Trình
 ```
 Continue / New Game Screen
-    │
-    ├─ Continue
-    │  ├─ Nếu giới tính đã chọn chưa có save: báo lỗi và ở lại màn hình này
-    │  └─ Nếu có save: load slot của Girl/Boy đã chọn rồi vào gameplay
-    │
-    └─ New Game
-      └─ Khởi tạo phiên mới theo giới tính đã chọn rồi vào gameplay
+   │
+   ├─ Continue
+   │  ├─ Nếu giới tính đã chọn chưa có save: báo lỗi và ở lại màn hình này
+   │  └─ Nếu có save: load slot của Girl/Boy đã chọn rồi vào gameplay
+   │
+   └─ New Game
+   └─ Khởi tạo phiên mới theo giới tính đã chọn rồi vào gameplay
 ```
 
 ---
@@ -98,16 +109,17 @@ Continue / New Game Screen
 ```
 ← / → Arrow Keys    : Chuyển giữa Girl/Boy
 Enter / Space       : Xác nhận nhân vật và sang màn hình Continue / New Game
+P                   : Mở / đóng Audio Settings
 ```
 
 ### Quy Trình
 ```
 Character Selection Screen
-        │
-        ├─ Người chơi bấm ← hoặc →
-        │  └─ Cập nhật selectedOption (0 hoặc 1)
-        │  └─ Render card được chọn với hiệu ứng
-        │
+   │
+   ├─ Người chơi bấm ← hoặc →
+   │  └─ Cập nhật selectedOption (0 hoặc 1)
+   │  └─ Render card được chọn với hiệu ứng
+   │
    └─ Người chơi bấm Enter/Space
       └─ Chuyển sang Continue / New Game Screen
       └─ Giữ lại giới tính đã chọn để quyết định slot save tương ứng
@@ -145,13 +157,16 @@ Khi Character Selection hoàn tất:
              │   └─ Seeds (hidden, random 1 vị trí hợp lệ khắp map khi quest active)
              │
              ├─► InventorySystem
-             │   └─ Runtime-only, reset mỗi lần chơi mới
+             │   └─ Được lưu theo save slot hiện tại, khôi phục khi Continue
              │
              ├─► CatFollower
              │   └─ State: IDLE (chưa theo)
              │
              └─► Camera
                  └─ Theo sau Player, target: viewport center
+             │
+             └─► Audio Transition
+                └─ GameApplication chuyển BGM từ `menu_theme.mp3` sang `gameplay_loop.mp3` ngay trước khi `GameLoop.start()`
 ```
 
 ---
@@ -168,13 +183,18 @@ Khi Character Selection hoàn tất:
              │
              ├─ GameWorld.update(dt, inputHandler)
              │  │
+             │  ├─ Nếu Audio Settings Overlay ACTIVE:
+             │  │  ├─ P/Esc đóng overlay
+             │  │  ├─ ↑/↓ chọn dòng, ←/→ chỉnh volume, Enter bật/tắt mute
+             │  │  └─ Chặn movement/dialog/pickup/fishing/inventory/cat care và tạm dừng timer tạm thời phía dưới
+             │  │
              │  ├─ Nếu Inventory Overlay ACTIVE:
              │  │  ├─ I/Esc đóng kho
              │  │  └─ Chặn movement/dialog/pickup/cat care
              │  │
              │  ├─ Nếu Cat Care Overlay ACTIVE:
              │  │  ├─ C/Esc đóng menu chăm mèo
-             │  │  ├─ ↑/↓ chọn cá trong inventory runtime
+             │  │  ├─ ↑/↓ chọn cá trong inventory đã lưu
              │  │  ├─ Enter cho ăn vật phẩm đang chọn
              │  │  └─ Chặn movement/dialog/pickup/fishing
              │  │
@@ -184,6 +204,7 @@ Khi Character Selection hoàn tất:
              │  │  ├─ Enter: interaction với NPC
              │  │  ├─ E: vuốt mèo khi ở gần
              │  │  ├─ C: gọi mèo hoặc mở Cat Care menu
+             │  │  ├─ Nếu Player thực sự di chuyển trên cỏ: phát footsteps xen kẽ theo cadence
              │  │  └─ Kiểm tra item pickup
              │  │
              │  ├─ Nếu Dialog ACTIVE:
@@ -204,7 +225,8 @@ Khi Character Selection hoàn tất:
              │  ├─ Render Player
              │  ├─ Render CatFollower
              │  ├─ Render DialogSystem (nếu active)
-             │  └─ Render Cat Care Overlay (nếu active)
+             │  ├─ Render Cat Care Overlay (nếu active)
+             │  └─ Render Audio Settings Overlay (nếu active, luôn top-most)
              │
              └─ InputHandler.update() [clear justPressed keys]
 ```
@@ -222,8 +244,9 @@ Khi Character Selection hoàn tất:
 - Countdown mở lại của quest lặp `seeds`
 - Danh sách quest item đã nhặt
 - Vị trí spawn hiện tại của quest item đang dùng trong world
-- Inventory runtime (hoa/cây/cá và quantity)
+- Inventory persistent (hoa/cây/cá và quantity)
 - Cat state dài hạn: unlocked, vị trí, mood, affection, state
+- Audio volume/mute global không nằm trong save slot; chúng được lưu riêng trong `settings.properties`
 
 ### Dữ Liệu Không Lưu
 - Dialog đang mở dở
@@ -258,6 +281,62 @@ Khi đóng game:
       └─ Nếu đang có GameWorld -> tự động save snapshot hiện tại vào slot Girl/Boy đúng với world đang chơi
 
 Nếu game bị tắt trong lúc quest `seeds` đang countdown mở lại, khoảng thời gian ngoài game vẫn được trừ vào timer khi người chơi bấm `Continue`.
+
+---
+
+## 4b. Audio System & Settings
+
+### Mục Tiêu Thiết Kế
+- Dùng ít file âm thanh nhất có thể và tái sử dụng theo ngữ nghĩa gần nhất.
+- Không thêm SFX riêng cho những event không có asset phù hợp; các event đó giữ im lặng.
+- Thiết lập âm thanh là global cho toàn bộ game, không phụ thuộc slot save giới tính.
+
+### Runtime Audio
+- `AudioManager` là singleton quản lý BGM loop và one-shot SFX.
+- BGM front screen dùng `menu_theme.mp3`.
+- BGM gameplay dùng `gameplay_loop.mp3`.
+- SFX one-shot được cache và phát lại theo event key thay vì hard-code file path ở từng nơi.
+- Nếu thiếu asset hoặc media lỗi, game chỉ log 1 lần và tiếp tục chạy, không crash flow chính.
+
+### Audio Settings Overlay
+- Có mặt ở cả front screen và gameplay, mở/tắt bằng `P`.
+- Trong gameplay, overlay này có ưu tiên cao nhất trong `GameWorld.update()`, nên khi mở sẽ chặn input và tạm dừng các tương tác/timer tạm phía dưới.
+- Điều khiển overlay:
+
+```
+↑ / ↓ hoặc W / S    : Chọn dòng thiết lập
+← / → hoặc A / D    : Tăng / giảm volume cho hàng volume
+Enter / Space       : Bật / tắt mute của mục đang chọn
+Esc hoặc P          : Đóng overlay
+```
+
+- Hai hàng volume: `Nhạc nền`, `Hiệu ứng`.
+- Hai hàng mute: `Tắt nhạc`, `Tắt hiệu ứng`.
+- Giá trị mặc định: music `28%`, sfx `70%`, cả hai đều không mute.
+- Khi người chơi thay đổi volume/mute, `AudioManager.applySettings(...)` được áp dụng ngay.
+- Khi overlay đóng hoặc game thoát, settings được ghi vào `%USERPROFILE%/.tiny-village-game/settings.properties`.
+
+### Minimal Audio Mapping
+
+| Asset | Dùng cho |
+| --- | --- |
+| `menu_theme.mp3` | Character Selection + Continue / New Game |
+| `gameplay_loop.mp3` | Gameplay loop |
+| `footstep_grass_1.wav` | Footstep cadence trên cỏ |
+| `footstep_grass_2.wav` | Footstep cadence xen kẽ trên cỏ |
+| `dialog_open.wav` | Bắt đầu một dialog mới |
+| `dialog_advance.wav` | Chuyển line thoại, đổi lựa chọn, và các tương tác nhẹ như đổi selection/menu navigation/call mèo/bắt đầu câu cá |
+| `ui_confirm.wav` | Xác nhận lựa chọn, mở kho, mở Cat Care, pickup item, reward cá, xác nhận choice, cho mèo ăn thành công |
+| `ui_back.wav` | Quay lại Character Selection, đóng dialog, đóng kho, đóng Cat Care, đóng Audio Settings, báo trượt câu cá |
+| `quest_start.wav` | Quest chuyển sang `ACTIVE` |
+| `quest_complete.wav` | Quest chuyển sang `COMPLETED` |
+
+### Những Event Giữ Im Lặng
+- Toggle minimap `M`.
+- Continue thất bại vì slot chưa có save.
+- Quest reset timer chạy nền.
+- Notification text / badge prompt / cooldown lỗi.
+- Auto-save lúc thoát game.
 ```
 
 ---
@@ -282,33 +361,33 @@ Esc                    : Đóng kho lưu trữ hoặc Cat Care menu đang mở
 ### Quy Trình Chuyển Động
 ```
 Input (W/A/S/D)
-    │
-    ├─ InputHandler ghi lại keyPressed
-    │
-    └─► Player.update(dt, inputHandler)
-        ├─ Tính vị trí mới (x, y)
-        ├─ Kiểm tra collision với Tile solid
-        │  └─ Nếu va chạm: Revert movement
-        ├─ Cập nhật direction (UP, DOWN, LEFT, RIGHT)
-        ├─ Cập nhật animation frame
-        │  └─ Walk animation: 4 frames, loop
-        │  └─ Idle frame: khi không di chuyển
-        └─ Render sprite tại vị trí mới
+   │
+   ├─ InputHandler ghi lại keyPressed
+   │
+   └─► Player.update(dt, inputHandler)
+      ├─ Tính vị trí mới (x, y)
+      ├─ Kiểm tra collision với Tile solid
+      │  └─ Nếu va chạm: Revert movement
+      ├─ Cập nhật direction (UP, DOWN, LEFT, RIGHT)
+      ├─ Cập nhật animation frame
+      │  └─ Walk animation: 4 frames, loop
+      │  └─ Idle frame: khi không di chuyển
+      └─ Render sprite tại vị trí mới
 ```
 
 ### Quy Trình Tương Tác NPC
 ```
 Player gần NPC (trong interactionRadius)
-    │
-    ├─ Hiển thị visual indicator ("!" hoặc "...")
-    │
-    └─ Người chơi bấm Enter
-       │
-       └─► DialogSystem.startDialog(npc, dialogData)
-           ├─ State: INACTIVE → SHOWING_TEXT
-           ├─ Lấy dialog text của NPC
-           ├─ Chạy typewriter effect
-           └─ Khi text đủ: chuyển sang SHOWING_CHOICES (nếu có)
+   │
+   ├─ Hiển thị visual indicator ("!" hoặc "...")
+   │
+   └─ Người chơi bấm Enter
+      │
+      └─► DialogSystem.startDialog(npc, dialogData)
+         ├─ State: INACTIVE → SHOWING_TEXT
+         ├─ Lấy dialog text của NPC
+         ├─ Chạy typewriter effect
+         └─ Khi text đủ: chuyển sang SHOWING_CHOICES (nếu có)
 ```
 
 ### Quy Trình Cat Care
@@ -327,11 +406,11 @@ Player đã hoàn thành quest `fishing_rod`
    │
    └─ Bấm C khi mèo đã ở gần
       └─ catCareOpen = true
-        ├─ Hiển thị mood, heart level, affection, cooldown
-        ├─ Hiển thị danh sách cá trong inventory runtime
-        ├─ ↑/↓ chọn cá
-        ├─ Enter: cho ăn cá đã chọn
-        └─ C/Esc: đóng menu
+         ├─ Hiển thị mood, heart level, affection, cooldown
+         ├─ Hiển thị danh sách cá trong inventory đã lưu
+         ├─ ↑/↓ chọn cá
+         ├─ Enter: cho ăn cá đã chọn
+         └─ C/Esc: đóng menu
 ```
 
 ---
@@ -373,6 +452,14 @@ Player đã hoàn thành quest `fishing_rod`
 └────────────────────────────────────────┘
 ```
 
+### Audio Hooks Trong Dialog
+- `startDialog()` phát `dialog_open.wav`.
+- Khi người chơi skip typewriter hoặc sang line kế tiếp, game phát `dialog_advance.wav`.
+- Khi di chuyển selection trong choice dialog, game cũng dùng `dialog_advance.wav`.
+- Khi xác nhận choice bằng `Enter`/`Space`, game phát `ui_confirm.wav`.
+- Khi dialog đóng và trả control về gameplay, game phát `ui_back.wav`.
+- Quest callback từ dialog phát `quest_start.wav` hoặc `quest_complete.wav` tương ứng.
+
 ### Quest System: nhiều quest theo `questId`
 
 `QuestSystem` quản lý state theo id:
@@ -395,6 +482,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - Người chơi di chuyển đến vị trí item
 - Khi va chạm với item → Auto pickup
 - QuestSystem.addItem("fishing_rod")
+- Phát `ui_confirm.wav` khi pickup thành công
 
 **Stage 3: RETURN & COMPLETE**
 - Quay lại "Bạn nhỏ" NPC
@@ -407,7 +495,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - CatFollower: IDLE → WAITING
 - Mèo được mở khóa tương tác nhưng vẫn đứng tại chỗ cho tới khi Player bấm `C`
 - Cat Care được mở khóa với mood ban đầu `60/100`
-- Heart level ban đầu là `1`, suy ra từ affection runtime
+- Heart level ban đầu là `1`, suy ra từ affection hiện tại của mèo
 - Player có thể dùng `C` để gọi mèo lại gần / mở Cat Care và `E` để vuốt mèo khi đã ở gần
 - Những lần nói chuyện sau đó với NPC chỉ còn dialog hậu quest, không nhận lại quest `fishing_rod`
 - Có thể tiếp tục explore hoặc nói chuyện NPC khác
@@ -424,6 +512,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - Người chơi di chuyển đến vị trí item
 - Khi va chạm với item → Auto pickup
 - QuestSystem.addItem("seeds")
+- Phát `ui_confirm.wav` khi pickup thành công
 
 **Stage 3: RETURN & COMPLETE**
 - Quay lại "Bác làm vườn"
@@ -434,7 +523,7 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 
 **Kết Quả:**
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
-- Thêm reward vào InventorySystem runtime
+- Thêm reward vào InventorySystem persistent
 - Hiện notification tên phần thưởng nhận được
 - Quest indicator đổi từ trạng thái thành công sang countdown mở lại sau 10 giây
 - Hết 3600 giây: quest reset về `NOT_STARTED`, item Seeds được phép xuất hiện lại ở lần nhận mới
@@ -446,24 +535,24 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 
 ```
 Item (Fishing Rod / Seeds) Object
-    │ (visible = false, tồn tại trên map nhưng không render)
-    │
-    ├─ Quest tương ứng ACTIVE
-    │ ├─ Chọn ngẫu nhiên 1 tile hợp lệ trên toàn bộ map
-    │ └─ visible = true (render sprite item)
-    │
-    ├─ Continue / Load khi quest vẫn ACTIVE
-    │ └─ Khôi phục lại đúng tọa độ spawn đã save trước đó
-    │
-    └─► Player.update() → Check collision với Item.getBounds()
-        │
-        ├─ Va chạm: Item.onPickup()
-        │  ├─ Phát hiệu ứng pickup (sparkle)
-        │  ├─ item.setCollected(true)
-        │  ├─ QuestSystem.addItem(itemId)
-        │  └─ Render notification nhặt vật phẩm
-        │
-        └─ Không va chạm: Tiếp tục loop
+   │ (visible = false, tồn tại trên map nhưng không render)
+   │
+   ├─ Quest tương ứng ACTIVE
+   │ ├─ Chọn ngẫu nhiên 1 tile hợp lệ trên toàn bộ map
+   │ └─ visible = true (render sprite item)
+   │
+   ├─ Continue / Load khi quest vẫn ACTIVE
+   │ └─ Khôi phục lại đúng tọa độ spawn đã save trước đó
+   │
+   └─► Player.update() → Check collision với Item.getBounds()
+      │
+      ├─ Va chạm: Item.onPickup()
+      │  ├─ Phát hiệu ứng pickup (sparkle)
+      │  ├─ item.setCollected(true)
+      │  ├─ QuestSystem.addItem(itemId)
+      │  └─ Render notification nhặt vật phẩm
+      │
+      └─ Không va chạm: Tiếp tục loop
 ```
 
 ---
@@ -473,31 +562,31 @@ Item (Fishing Rod / Seeds) Object
 ### Reward Flow
 ```
 Quest `seeds` ACTIVE + player đã nhặt Seeds
-    │
-    └─ Người chơi quay lại nói chuyện Bác làm vườn
-       │
-       ├─ DialogSystem hiển thị lời cảm ơn
-       │
-       └─ QuestSystem.completeQuest("seeds")
-          │
-          └─ GameWorld.onQuestComplete("seeds")
-             ├─ InventorySystem.addRandomGardenReward()
-             ├─ Random 1 item: rose / sunflower / tulip / bonsai
-             ├─ Thêm vào kho runtime với quantity +1
-             ├─ Hiện notification tên phần thưởng
-             ├─ 10 giây đầu: quest indicator hiển thị `✓ Hoàn thành!`
-             ├─ Sau đó: quest indicator đổi sang countdown mở lại
-             └─ Hết 3600 giây, quest `seeds` tự mở lại
+   │
+   └─ Người chơi quay lại nói chuyện Bác làm vườn
+      │
+      ├─ DialogSystem hiển thị lời cảm ơn
+      │
+      └─ QuestSystem.completeQuest("seeds")
+         │
+         └─ GameWorld.onQuestComplete("seeds")
+            ├─ InventorySystem.addRandomGardenReward()
+            ├─ Random 1 item: rose / sunflower / tulip / bonsai
+            ├─ Thêm vào kho đã lưu với quantity +1
+            ├─ Hiện notification tên phần thưởng
+            ├─ 10 giây đầu: quest indicator hiển thị `✓ Hoàn thành!`
+            ├─ Sau đó: quest indicator đổi sang countdown mở lại
+            └─ Hết 3600 giây, quest `seeds` tự mở lại
 ```
 
-### Inventory Runtime
+   ### Inventory Persistent
 ```
 InventorySystem
-    ├─ Lưu trong memory theo phiên chơi hiện tại
-    ├─ Chứa cả reward cây/hoa và cá câu được
-    ├─ Không ghi file save/load
-    ├─ Restart game/app → inventory trống lại
-    └─ Hoàn thành quest hạt giống trong lần chơi mới → reward random lại
+   ├─ Lưu theo save slot hiện tại
+   ├─ Chứa cả reward cây/hoa và cá câu được
+   ├─ Được ghi/đọc cùng dữ liệu save/load
+   ├─ Continue → khôi phục lại đúng item và số lượng
+   └─ New Game → bắt đầu với inventory trống
 ```
 
 ### Fish Reward Flow
@@ -506,23 +595,26 @@ Fishing Mini-game thắng
    │
    └─ InventorySystem.addRandomFishReward()
       ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
-      ├─ Thêm vào inventory runtime với quantity +1
+   ├─ Thêm vào inventory đã lưu với quantity +1
       └─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
 ```
 
 ### Inventory Overlay
 ```
 Người chơi nhấn I
-    │
-    └─ inventoryOpen = true
-       │
-       ├─ Render panel "Kho lưu trữ"
-       ├─ Hiển thị icon, tên cây/hoa/cá, số lượng
-       ├─ Nếu chưa có item: "Chưa có vật phẩm nào"
-       └─ I hoặc Esc → đóng overlay
+   │
+   └─ inventoryOpen = true
+      │
+      ├─ Render panel "Kho lưu trữ"
+      ├─ Hiển thị icon, tên cây/hoa/cá, số lượng
+      ├─ Nếu chưa có item: "Chưa có vật phẩm nào"
+      └─ I hoặc Esc → đóng overlay
 ```
 
-Inventory overlay chỉ để xem vật phẩm runtime. Hành động cho mèo ăn diễn ra trong Cat Care menu riêng, không thực hiện trực tiếp trong panel kho.
+   - Mở inventory phát `ui_confirm.wav`.
+   - Đóng inventory phát `ui_back.wav`.
+
+Inventory overlay chỉ để xem vật phẩm đã lưu. Hành động cho mèo ăn diễn ra trong Cat Care menu riêng, không thực hiện trực tiếp trong panel kho.
 
 Khi inventory overlay đang mở:
 - Player không di chuyển
@@ -570,7 +662,7 @@ Mood:
    └─ Cho ăn 1 cá: +15 mood
 
 Heart level:
-   ├─ Tính từ affection runtime, không lưu file
+   ├─ Suy ra từ affection đã lưu trong file save
    ├─ Mở khóa Cat Care: heart level = 1
    ├─ Vuốt ve thành công: +2 affection
    ├─ Cho ăn 1 cá: +8 affection
@@ -610,6 +702,13 @@ CatFollower.update(dt, player)
        └─ Khi đủ gần: state quay lại WAITING
 ```
 
+   - Bấm `C` gọi mèo từ xa dùng `dialog_advance.wav`.
+   - Mở Cat Care khi mèo đã ở gần dùng `ui_confirm.wav`.
+   - Đóng Cat Care bằng `C`/`Esc` dùng `ui_back.wav`.
+   - Di chuyển selection trong Cat Care dùng `dialog_advance.wav`.
+   - Cho mèo ăn thành công dùng `ui_confirm.wav`.
+   - Vuốt mèo thành công dùng `dialog_advance.wav`.
+
    ### Quy Trình Cho Ăn
    ```
    Player đứng gần mèo + bấm C
@@ -633,20 +732,20 @@ CatFollower.update(dt, player)
 
 ```
 Camera.update(player, gameWorld)
-    │
-    └─ Target: Giữ Player ở center viewport
-       │
-       ├─ cameraX = player.x - (VIEWPORT_WIDTH / 2)
-       ├─ cameraY = player.y - (VIEWPORT_HEIGHT / 2)
-       │
-       ├─ Clamp để không vượt quá map bounds
-       │ ├─ cameraX: [0, worldWidth - VIEWPORT_WIDTH]
-       │ └─ cameraY: [0, worldHeight - VIEWPORT_HEIGHT]
-       │
-       └─► TileMap.render(gc, camera)
-           ├─ Chỉ render tiles trong viewport
-           ├─ Offset bằng camera position
-           └─ Smooth scrolling
+   │
+   └─ Target: Giữ Player ở center viewport
+   │
+   ├─ cameraX = player.x - (VIEWPORT_WIDTH / 2)
+   ├─ cameraY = player.y - (VIEWPORT_HEIGHT / 2)
+   │
+   ├─ Clamp để không vượt quá map bounds
+   │ ├─ cameraX: [0, worldWidth - VIEWPORT_WIDTH]
+   │ └─ cameraY: [0, worldHeight - VIEWPORT_HEIGHT]
+   │
+   └─► TileMap.render(gc, camera)
+      ├─ Chỉ render tiles trong viewport
+      ├─ Offset bằng camera position
+      └─ Smooth scrolling
 ```
 
 ```
@@ -657,28 +756,28 @@ Camera.update(player, gameWorld)
 
 ```
 GrassTile.render(gc, groundLayer, col, row, x, y)
-    │
-    ├─ Tính bitmask 4-hướng (Lên, Phải, Xuống, Trái)
-    │  └─ Kiểm tra tile xung quanh có phải là WATER / WATER_EDGE / PATH không (Out of bounds coi như Water)
-    │  └─ Bitmask: (LEFT_WATER ? 1 : 0) | (DOWN_WATER ? 2 : 0) | (RIGHT_WATER ? 4 : 0) | (UP_WATER ? 8 : 0)
-    │
-    ├─ Lấy texture từ cache (16 biến thể)
-    │  ├─ Nếu file `grass_autotile.png` / `dark_grass_autotile.png` tồn tại trong resource:
-    │  │  └─ Load từ spritesheet ngoài theo mapping:
-    │  │     1001 (9)  1000 (8)  1100 (12) 1101 (13)
-    │  │     0001 (1)  0000 (0)  0100 (4)  0101 (5)
-    │  │     0011 (3)  0010 (2)  0110 (6)  0111 (7)
-    │  │     1011 (11) 1010 (10) 1110 (14) 1111 (15)
-    │  │
-    │  ├─ Nếu file `grass_autotile_extended.png` / `dark_grass_autotile_extended.png` tồn tại:
-    │  │  └─ Chỉ dùng hàng đầu tiên của spritesheet để lấy 16 biến thể cardinal cơ bản.
-    │  │  └─ Không còn dùng diagonal mask để bo góc tile cỏ quanh hồ nước hoặc PATH.
-    │  │
-    │  ├─ Nếu KHÔNG có file (Fallback):
-    │  │  └─ Tự động sinh pixel art bằng code.
-    │  │  └─ Thêm viền tối (Shadow) theo cạnh tiếp xúc, không bo góc chéo.
-    │  │
-    │  └─ Render tile cỏ với cạnh thẳng quanh WATER / WATER_EDGE / PATH thay vì cắt góc bo tròn
+   │
+   ├─ Tính bitmask 4-hướng (Lên, Phải, Xuống, Trái)
+   │  └─ Kiểm tra tile xung quanh có phải là WATER / WATER_EDGE / PATH không (Out of bounds coi như Water)
+   │  └─ Bitmask: (LEFT_WATER ? 1 : 0) | (DOWN_WATER ? 2 : 0) | (RIGHT_WATER ? 4 : 0) | (UP_WATER ? 8 : 0)
+   │
+   ├─ Lấy texture từ cache (16 biến thể)
+   │  ├─ Nếu file `grass_autotile.png` / `dark_grass_autotile.png` tồn tại trong resource:
+   │  │  └─ Load từ spritesheet ngoài theo mapping:
+   │  │     1001 (9)  1000 (8)  1100 (12) 1101 (13)
+   │  │     0001 (1)  0000 (0)  0100 (4)  0101 (5)
+   │  │     0011 (3)  0010 (2)  0110 (6)  0111 (7)
+   │  │     1011 (11) 1010 (10) 1110 (14) 1111 (15)
+   │  │
+   │  ├─ Nếu file `grass_autotile_extended.png` / `dark_grass_autotile_extended.png` tồn tại:
+   │  │  └─ Chỉ dùng hàng đầu tiên của spritesheet để lấy 16 biến thể cardinal cơ bản.
+   │  │  └─ Không còn dùng diagonal mask để bo góc tile cỏ quanh hồ nước hoặc PATH.
+   │  │
+   │  ├─ Nếu KHÔNG có file (Fallback):
+   │  │  └─ Tự động sinh pixel art bằng code.
+   │  │  └─ Thêm viền tối (Shadow) theo cạnh tiếp xúc, không bo góc chéo.
+   │  │
+   │  └─ Render tile cỏ với cạnh thẳng quanh WATER / WATER_EDGE / PATH thay vì cắt góc bo tròn
 ```
 
 ---
@@ -724,30 +823,30 @@ GrassTile.render(gc, groundLayer, col, row, x, y)
 ### Key Tracking
 ```
 InputHandler
-    ├─ keyPressed: Set<KeyCode> (keys held down)
-    ├─ justPressed: Set<KeyCode> (keys pressed this frame)
-    └─ justReleased: Set<KeyCode> (keys released this frame)
+   ├─ keyPressed: Set<KeyCode> (keys held down)
+   ├─ justPressed: Set<KeyCode> (keys pressed this frame)
+   └─ justReleased: Set<KeyCode> (keys released this frame)
 ```
 
 ### Update Cycle
 ```
 Frame 1:
-    ├─ User presses W
-    ├─ keyPressed.add(W)
-    ├─ justPressed.add(W)
-    └─ End of frame: justPressed stays W
+   ├─ User presses W
+   ├─ keyPressed.add(W)
+   ├─ justPressed.add(W)
+   └─ End of frame: justPressed stays W
 
 Frame 2:
-    ├─ User still holds W
-    ├─ keyPressed.contains(W) = true
-    ├─ justPressed.clear() [called in GameLoop.handle()]
-    └─ justPressed.contains(W) = false
+   ├─ User still holds W
+   ├─ keyPressed.contains(W) = true
+   ├─ justPressed.clear() [called in GameLoop.handle()]
+   └─ justPressed.contains(W) = false
 
 Frame 3:
-    ├─ User releases W
-    ├─ keyPressed.remove(W)
-    ├─ justReleased.add(W)
-    └─ End of frame: justReleased cleared next frame
+   ├─ User releases W
+   ├─ keyPressed.remove(W)
+   ├─ justReleased.add(W)
+   └─ End of frame: justReleased cleared next frame
 ```
 
 ### Usage in Code
@@ -770,31 +869,31 @@ if (inputHandler.isKeyJustPressed(KeyCode.ENTER)) {
 ### AABB (Axis-Aligned Bounding Box)
 ```
 Entity
-    ├─ Position: (x, y) - world coordinates
-    ├─ Size: (width, height) - pixels
-    └─ getBounds() → Rectangle2D(x, y, width, height)
+   ├─ Position: (x, y) - world coordinates
+   ├─ Size: (width, height) - pixels
+   └─ getBounds() → Rectangle2D(x, y, width, height)
 ```
 
 ### Collision Checks
 ```
 // 1. Player vs Tile Collision
 Player.update():
-    ├─ newX = x + velocity.x * dt
-    ├─ newY = y + velocity.y * dt
-    │
-    ├─ For each corner of player bounds:
-    │  └─ Check if TileMap.isSolid(worldX, worldY)
-    │
-    └─ If collision: Revert to old position
+   ├─ newX = x + velocity.x * dt
+   ├─ newY = y + velocity.y * dt
+   │
+   ├─ For each corner of player bounds:
+   │  └─ Check if TileMap.isSolid(worldX, worldY)
+   │
+   └─ If collision: Revert to old position
 
 // 2. Player vs NPC Interaction
 Player.update():
-    ├─ For each NPC:
-    │  ├─ Check if Player.interactionBounds
-    │     overlaps with NPC.bounds
-    │  │
-    │  └─ If overlap + Enter pressed:
-    │     └─ startDialog(npc)
+   ├─ For each NPC:
+   │  ├─ Check if Player.interactionBounds
+   │     overlaps with NPC.bounds
+   │  │
+   │  └─ If overlap + Enter pressed:
+   │     └─ startDialog(npc)
 
 // 3. Player vs Cat Care Interaction
 Player.update():
@@ -807,13 +906,13 @@ Player.update():
 
 // 4. Player vs Item Pickup
 Player.update():
-    ├─ For each Item:
-    │  ├─ Check if Player.bounds overlaps Item.bounds
-    │  │
-    │  └─ If overlap:
-    │     ├─ Item.setCollected(true)
-    │     ├─ QuestSystem.addItem(itemId)
-    │     └─ Show pickup notification
+   ├─ For each Item:
+   │  ├─ Check if Player.bounds overlaps Item.bounds
+   │  │
+   │  └─ If overlap:
+   │     ├─ Item.setCollected(true)
+   │     ├─ QuestSystem.addItem(itemId)
+   │     └─ Show pickup notification
 ```
 
 ---
@@ -839,7 +938,7 @@ Player.update():
    - 4 NPCs scattered, gồm Bác làm vườn ở góc dưới-trái
    - Fishing Rod item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
    - Seeds item (hidden, sẽ random ở bất kỳ ô hợp lệ nào trên map khi quest bắt đầu)
-   - InventorySystem empty (runtime-only)
+   - InventorySystem empty nếu New Game, hoặc được khôi phục từ save nếu Continue
    - CatFollower at (300, 300) - IDLE
    - Start GameLoop
 
@@ -902,7 +1001,7 @@ Player.update():
    - Bấm E khi mèo ở gần → mood +5, affection +2
    - Bấm C khi mèo ở gần → mở Cat Care menu
    - Chọn 1 con cá và bấm Enter → mèo ăn, mood +15, affection +8
-   - Heart level tăng dần theo affection runtime
+   - Heart level tăng dần theo affection đã lưu
    - Continue playing until close game
 
 11. [SAVE / LOAD]
@@ -923,46 +1022,46 @@ Player.update():
 
 ```
 Main.java
-    │
-    └─► GameApplication (extends Application)
-        │
-        ├─► Canvas (800x600)
-        │
-        ├─► GameLoop (AnimationTimer)
-        │   └─ handle() chạy 60 FPS
-        │
-        ├─► GameWorld (Manager)
-        │   ├─ TileMap (40x30 tiles)
-        │   ├─ Player
-        │   ├─ List<NPC> (4 NPCs)
-        │   ├─ List<Item> (Fishing Rod, Seeds, etc.)
-        │   ├─ CatFollower
-        │   ├─ Camera
-        │   ├─ DialogSystem
-        │   ├─ QuestSystem
-        │   ├─ InventorySystem (runtime rewards + fish)
-        │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
-            │
-            ├─► SaveSystem
-            │   ├─ Properties files `save-girl.properties` / `save-boy.properties`
-            │   ├─ save(snapshot)
-            │   └─ load(isGirl) -> SaveData
-        │
-        ├─► InputHandler (Input tracking)
-        │   ├─ keyPressed
-        │   ├─ justPressed
-        │   └─ justReleased
-        │
-        └─► Entities (Base classes)
-            ├─ Entity (abstract)
-            │  ├─ Player (extends Entity)
-            │  ├─ NPC (extends Entity)
-            │  ├─ Item (extends Entity)
-            │  └─ CatFollower (extends Entity)
-            │
-            └─ World Components
-               ├─ Tile (enum)
-               └─ TileMap (2D array)
+   │
+   └─► GameApplication (extends Application)
+      │
+      ├─► Canvas (800x600)
+      │
+      ├─► GameLoop (AnimationTimer)
+      │   └─ handle() chạy 60 FPS
+      │
+      ├─► GameWorld (Manager)
+      │   ├─ TileMap (40x30 tiles)
+      │   ├─ Player
+      │   ├─ List<NPC> (4 NPCs)
+      │   ├─ List<Item> (Fishing Rod, Seeds, etc.)
+      │   ├─ CatFollower
+      │   ├─ Camera
+      │   ├─ DialogSystem
+      │   ├─ QuestSystem
+      │   ├─ InventorySystem (persistent rewards + fish)
+      │   └─ Cat Care Overlay state (menu chọn cá cho mèo)
+      │
+      ├─► SaveSystem
+      │   ├─ Properties files `save-girl.properties` / `save-boy.properties`
+      │   ├─ save(snapshot)
+      │   └─ load(isGirl) -> SaveData
+      │
+      ├─► InputHandler (Input tracking)
+      │   ├─ keyPressed
+      │   ├─ justPressed
+      │   └─ justReleased
+      │
+      └─► Entities (Base classes)
+         ├─ Entity (abstract)
+         │  ├─ Player (extends Entity)
+         │  ├─ NPC (extends Entity)
+         │  ├─ Item (extends Entity)
+         │  └─ CatFollower (extends Entity)
+         │
+         └─ World Components
+            ├─ Tile (enum)
+            └─ TileMap (2D array)
 ```
 
 ---
@@ -999,65 +1098,65 @@ Optimization Techniques:
 
 ```
 [CHARACTER SELECT]
-       │
-     └─ Enter
-        └─► [CONTINUE / NEW GAME]
-           ├─ Continue -> load selected gender slot -> [GAMEPLAY]
-           ├─ New Game -> create new selected gender world -> [GAMEPLAY]
-           └─ Esc -> [CHARACTER SELECT]
+   │
+   └─ Enter
+      └─► [CONTINUE / NEW GAME]
+         ├─ Continue -> load selected gender slot -> [GAMEPLAY]
+         ├─ New Game -> create new selected gender world -> [GAMEPLAY]
+         └─ Esc -> [CHARACTER SELECT]
 
-     [GAMEPLAY]
-            │
-            ├─ Player moves (Input: WASD)
-            │
-            ├─ Encounter NPC (Input: Enter)
-            │
-            ├─► [DIALOG]
-            │    ├─ Show text (typewriter)
-            │    │
-            │    ├─ Show choices (↑↓ select, Enter confirm)
-            │    │
-            │    └─ Quest triggered (startQuest(questId))
-            │         │
-            │         └─► [QUEST ACTIVE]
-            │              ├─ Quest item visible
-            │              │
-            │              ├─ Player pickup item
-            │              │
-            │              └─► [RETURN TO NPC]
-            │                   ├─ Dialog quest complete
-            │                   ├─ Quest `fishing_rod` closed permanently
-            │                   │
-            │                   ├─ If fishing_rod: [CAT CARE UNLOCKED]
-            │                   │    ├─ Cat state: WAITING
-            │                   │    ├─ Press C when far → [CAT CALLING] → WAITING
-            │                   │    ├─ Press E when near → mood/affection tăng
-            │                   │    └─ Press C when near → [CAT CARE MENU]
-            │                   │         ├─ ↑/↓ chọn cá
-            │                   │         ├─ Enter feed fish
-            │                   │         └─ C/Esc close
-            │                   │
-            │                   ├─ If seeds: random garden reward
-            │                   │    ├─ InventorySystem.addRandomGardenReward()
-            │                   │    └─ Sau 3600 giây -> [QUEST AVAILABLE AGAIN]
-            │                   │
-            │                   └─ Continue gameplay
-            │
-            ├─ Press I
-            │    └─► [INVENTORY OVERLAY]
-            │         ├─ Gameplay paused
-            │         ├─ Show runtime reward inventory
-            │         └─ I/Esc closes overlay
-            │
-            ├─ Press C near cat
-            │    └─► [CAT CARE OVERLAY]
-            │         ├─ Gameplay paused
-            │         ├─ Show mood / heart / cooldown
-            │         ├─ Show fish inventory for feeding
-            │         └─ C/Esc closes overlay
-            │
-            └─ Exit game
-                 └─ auto save current gender slot
+[GAMEPLAY]
+      │
+      ├─ Player moves (Input: WASD)
+      │
+      ├─ Encounter NPC (Input: Enter)
+      │
+      ├─► [DIALOG]
+      │    ├─ Show text (typewriter)
+      │    │
+      │    ├─ Show choices (↑↓ select, Enter confirm)
+      │    │
+      │    └─ Quest triggered (startQuest(questId))
+      │         │
+      │         └─► [QUEST ACTIVE]
+      │              ├─ Quest item visible
+      │              │
+      │              ├─ Player pickup item
+      │              │
+      │              └─► [RETURN TO NPC]
+      │                   ├─ Dialog quest complete
+      │                   ├─ Quest `fishing_rod` closed permanently
+      │                   │
+      │                   ├─ If fishing_rod: [CAT CARE UNLOCKED]
+      │                   │    ├─ Cat state: WAITING
+      │                   │    ├─ Press C when far → [CAT CALLING] → WAITING
+      │                   │    ├─ Press E when near → mood/affection tăng
+      │                   │    └─ Press C when near → [CAT CARE MENU]
+      │                   │         ├─ ↑/↓ chọn cá
+      │                   │         ├─ Enter feed fish
+      │                   │         └─ C/Esc close
+      │                   │
+      │                   ├─ If seeds: random garden reward
+      │                   │    ├─ InventorySystem.addRandomGardenReward()
+      │                   │    └─ Sau 3600 giây -> [QUEST AVAILABLE AGAIN]
+      │                   │
+      │                   └─ Continue gameplay
+      │
+      ├─ Press I
+      │    └─► [INVENTORY OVERLAY]
+      │         ├─ Gameplay paused
+      │         ├─ Show saved reward inventory
+      │         └─ I/Esc closes overlay
+      │
+      ├─ Press C near cat
+      │    └─► [CAT CARE OVERLAY]
+      │         ├─ Gameplay paused
+      │         ├─ Show mood / heart / cooldown
+      │         ├─ Show fish inventory for feeding
+      │         └─ C/Esc closes overlay
+      │
+      └─ Exit game
+            └─ auto save current gender slot
 ```
 
 ---
@@ -1074,7 +1173,20 @@ src/main/java/com/game/
 │   ├─ Stage setup
 │   ├─ Canvas creation
 │   ├─ Character selection UI
+│   ├─ Global audio settings bootstrap
 │   └─ GameLoop init
+│
+├── audio/
+│   ├── AudioManager.java
+│   │   ├─ Menu/gameplay BGM switching
+│   │   ├─ Shared SFX event mapping + clip cache
+│   │   └─ Missing asset safe-fail logging
+│   │
+│   ├── AudioSettings.java
+│   │   └─ Music/SFX volume + mute state
+│   │
+│   └── AudioSettingsStore.java
+│       └─ Global settings persistence ở `%USERPROFILE%/.tiny-village-game/settings.properties`
 │
 ├── core/
 │   ├── GameLoop.java (AnimationTimer)
@@ -1091,7 +1203,8 @@ src/main/java/com/game/
 │   ├── DialogSystem.java
 │   │   ├─ State machine (INACTIVE, SHOWING_TEXT, SHOWING_CHOICES)
 │   │   ├─ Typewriter effect
-│   │   └─ Choice selection
+│   │   ├─ Choice selection
+│   │   └─ Dialog audio hooks
 │   │
 │   ├── DialogData.java
 │   │   ├─ NPC dialogs (text, choices)
@@ -1103,7 +1216,7 @@ src/main/java/com/game/
 │
 ├── inventory/
 │   └── InventorySystem.java
-│       ├─ Runtime-only inventory cho reward cây/hoa và cá
+│       ├─ Inventory persistent cho reward cây/hoa và cá
 │       ├─ Random reward pool (rose, sunflower, tulip, bonsai, fish)
 │       ├─ Item quantities for inventory overlay
 │       └─ Consume fish items khi cho mèo ăn
@@ -1154,13 +1267,18 @@ src/main/java/com/game/
 │   └── SpriteSheet.java
 │       └─ Sprite frame management
 │
+├── ui/
+│   └── AudioSettingsOverlay.java
+│       └─ Shared settings overlay cho front screen và gameplay
+│
 └── world/
     ├── GameWorld.java (Manager)
     │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
     │   ├─ update(dt, inputHandler)
     │   ├─ render(gc)
     │   ├─ renderInventoryOverlay(gc)
-    │   └─ renderCatCareOverlay(gc)
+   │   ├─ renderCatCareOverlay(gc)
+   │   └─ Audio overlay + footstep gating
     │
     ├── Tile.java (enum)
     │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
@@ -1178,26 +1296,26 @@ src/main/java/com/game/
 
 ```
 AssetManager.loadAll()
-    │
-    ├─► Player asset có logic riêng theo giới tính đã chọn
-    │   ├─ Girl: kiểm tra src/main/resources/assets/player.png
-    │   ├─ Boy: kiểm tra src/main/resources/assets/player2.png
-    │   ├─ Nếu file tương ứng không tồn tại: fallback gọi PixelArtGenerator.generatePlayerSheet(isGirl)
-    │
-    ├─► Character Selection Screen gọi AssetManager.getPlayerPreview(isGirl)
-    │   ├─ Ưu tiên load ảnh preview riêng từ player_preview.png / player2_preview.png
-    │   ├─ Nếu thiếu preview asset: fallback về frame idle nhìn xuống từ player.png / player2.png
-    │   └─ Không đánh dấu loadAll() đã hoàn tất, nên vào game vẫn load đúng spritesheet theo lựa chọn
-    │
-    ├─► Các asset khác kiểm tra file ảnh trong src/main/resources/assets/ (vd: tiles.png, cat.png)
-    │   ├─ Nếu TỒN TẠI: Load Image từ file (Cho phép thay đổi giao diện không cần code)
-    │   └─ Nếu KHÔNG TỒN TẠI: Fallback gọi PixelArtGenerator tạo hình mặc định
-    │
-    ├─► Grass autotile hỗ trợ 2 mức custom asset
-    │   ├─ `grass_autotile.png` / `dark_grass_autotile.png`: spritesheet 4x4 cho 16 biến thể cardinal cơ bản
-    │   └─ `grass_autotile_extended.png` / `dark_grass_autotile_extended.png`: spritesheet lớn hơn, hiện chỉ đọc hàng đầu tiên cho 16 biến thể cardinal cơ bản
-    │
-    └─► Đưa Image/SpriteSheet vào bộ nhớ (HashMap) để sử dụng
+   │
+   ├─► Player asset có logic riêng theo giới tính đã chọn
+   │   ├─ Girl: kiểm tra src/main/resources/assets/player.png
+   │   ├─ Boy: kiểm tra src/main/resources/assets/player2.png
+   │   ├─ Nếu file tương ứng không tồn tại: fallback gọi PixelArtGenerator.generatePlayerSheet(isGirl)
+   │
+   ├─► Character Selection Screen gọi AssetManager.getPlayerPreview(isGirl)
+   │   ├─ Ưu tiên load ảnh preview riêng từ player_preview.png / player2_preview.png
+   │   ├─ Nếu thiếu preview asset: fallback về frame idle nhìn xuống từ player.png / player2.png
+   │   └─ Không đánh dấu loadAll() đã hoàn tất, nên vào game vẫn load đúng spritesheet theo lựa chọn
+   │
+   ├─► Các asset khác kiểm tra file ảnh trong src/main/resources/assets/ (vd: tiles.png, cat.png)
+   │   ├─ Nếu TỒN TẠI: Load Image từ file (Cho phép thay đổi giao diện không cần code)
+   │   └─ Nếu KHÔNG TỒN TẠI: Fallback gọi PixelArtGenerator tạo hình mặc định
+   │
+   ├─► Grass autotile hỗ trợ 2 mức custom asset
+   │   ├─ `grass_autotile.png` / `dark_grass_autotile.png`: spritesheet 4x4 cho 16 biến thể cardinal cơ bản
+   │   └─ `grass_autotile_extended.png` / `dark_grass_autotile_extended.png`: spritesheet lớn hơn, hiện chỉ đọc hàng đầu tiên cho 16 biến thể cardinal cơ bản
+   │
+   └─► Đưa Image/SpriteSheet vào bộ nhớ (HashMap) để sử dụng
 ```
 Game hỗ trợ thay đổi toàn bộ visual (nhân vật, map, item, reward icon) chỉ bằng cách copy file `.png` vào thư mục `assets`. Riêng player có thể dùng hai spritesheet `player.png` cho Girl và `player2.png` cho Boy, đồng thời có thể cung cấp preview riêng bằng `player_preview.png` và `player2_preview.png` cho màn hình chọn nhân vật.
 
@@ -1208,26 +1326,28 @@ Game hỗ trợ thay đổi toàn bộ visual (nhân vật, map, item, reward ic
 ### Điều kiện kích hoạt
 ```
 Player đã hoàn thành quest `fishing_rod`
-    │
-    ├─ Đứng gần tile WATER (full bounds + 16px chạm nước)
-    │  └─ Hiển thị biểu tượng 'F' nổi trên đầu Player
-    │
-    └─ Nhấn F
-       └─ PlayerState: NORMAL → FISHING
-          └─ Khóa movement / dialog / pickup / inventory / map cho tới khi kết thúc
+   │
+   ├─ Đứng gần tile WATER (full bounds + 16px chạm nước)
+   │  └─ Hiển thị biểu tượng 'F' nổi trên đầu Player
+   │
+   └─ Nhấn F
+      └─ PlayerState: NORMAL → FISHING
+         └─ Khóa movement / dialog / pickup / inventory / map cho tới khi kết thúc
 ```
+
+- Khi bắt đầu fishing mini-game bằng `F`, game dùng `dialog_advance.wav` như một cue tương tác nhẹ.
 
 ### Waiting Phase
 ```
 FishingMiniGame.start()
-    ├─ phase = WAITING
-    ├─ waitDuration = Random.Range(2.0, 5.0)
-    ├─ Hiển thị hình ảnh Player đang cầm cần câu hướng ra nước (sử dụng sprite sheet fishing_rod_action.png tương ứng 4 hướng)
-    └─ Player đứng yên chờ cá cắn
+   ├─ phase = WAITING
+   ├─ waitDuration = Random.Range(2.0, 5.0)
+   ├─ Hiển thị hình ảnh Player đang cầm cần câu hướng ra nước (sử dụng sprite sheet fishing_rod_action.png tương ứng 4 hướng)
+   └─ Player đứng yên chờ cá cắn
 
 Hết waitDuration
-    └─ phase = POWER_BAR
-       └─ Hiển thị "!" trên đầu Player
+   └─ phase = POWER_BAR
+      └─ Hiển thị "!" trên đầu Player
 ```
 
 ### Mini-game Phase: Power Bar
@@ -1237,31 +1357,33 @@ maxValue = 100
 duration = 7 giây
 
 Mỗi frame:
-    ├─ currentValue -= 15 * deltaTime
-    ├─ Clamp currentValue không thấp hơn 0
-    └─ Vẽ hiệu ứng bọt khí nổi lên cách Player 40px theo hướng nhìn của Player
+   ├─ currentValue -= 15 * deltaTime
+   ├─ Clamp currentValue không thấp hơn 0
+   └─ Vẽ hiệu ứng bọt khí nổi lên cách Player 40px theo hướng nhìn của Player
 
 Mỗi lần Space justPressed:
-    └─ currentValue += 8, clamp không quá 100
+   └─ currentValue += 8, clamp không quá 100
 ```
 
 ### Kết quả
 ```
 Thắng:
-    ├─ Nếu currentValue >= 100 trong vòng 7 giây
-    ├─ InventorySystem.addRandomFishReward()
-    ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
-    ├─ Cá được lưu trong inventory runtime
-    ├─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
-    └─ PlayerState: FISHING → NORMAL
+   ├─ Nếu currentValue >= 100 trong vòng 7 giây
+   ├─ InventorySystem.addRandomFishReward()
+   ├─ Random 1 cá: Cá chép / Cá rô / Cá trê / Cá vàng
+   ├─ Cá được lưu trong inventory persistent
+   ├─ Có thể dùng lại trong Cat Care menu để cho mèo ăn
+   ├─ Phát `ui_confirm.wav` vì đây cũng là một reward pickup
+   └─ PlayerState: FISHING → NORMAL
 
 Thua:
-    ├─ Nếu hết 7 giây mà currentValue < 100
-    ├─ Không thêm item vào inventory
-    └─ PlayerState: FISHING → NORMAL
+   ├─ Nếu hết 7 giây mà currentValue < 100
+   ├─ Không thêm item vào inventory
+   ├─ Phát `ui_back.wav` để báo fail và thoát nhịp câu cá
+   └─ PlayerState: FISHING → NORMAL
 ```
 
-Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo inventory mới.
+Reward cá được lưu persistent giống garden reward; Continue sẽ khôi phục inventory theo save slot hiện tại.
 
 ---
 
@@ -1270,10 +1392,11 @@ Reward cá là runtime-only giống garden reward; restart game/app sẽ tạo i
 - **FPS**: 60 frames per second (60 Hz)
 - **World**: Procedural tile-based map (40x30 tiles)
 - **Core Gameplay**: Explore → Dialog → Quest → Collect → Reward/Completion → Fishing mini-game → Cat Care (quest `fishing_rod` mở khóa mèo; nhấn `C` để gọi mèo lại gần; garden/fish rewards đi vào inventory; cá có thể dùng để tăng thân thiết với mèo)
-- **Input**: WASD movement, Enter NPC interaction, E pet cat, C call/care cat, F fishing, I inventory, M map, Arrow keys for menus
-- **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay → Cat Care overlay)
+- **Input**: WASD movement, Enter NPC interaction, E pet cat, C call/care cat, F fishing, I inventory, M map, P audio settings, Arrow keys for menus
+- **Rendering**: Layer-based (tiles → items → NPCs → player → cat → UI → fishing UI → inventory overlay → Cat Care overlay → Audio Settings overlay)
 - **Cat Prompt UI**: Khi đứng gần mèo, game hiển thị badge `E` và `C` trên đầu mèo theo cùng phong cách với badge `F`; mood chỉ hiển thị trong Cat Care overlay, không hiển thị trực tiếp trên mèo.
-- **State Management**: Character select → Continue/New Game screen → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Cat calling / Fishing → Auto-save on exit vào slot giới tính tương ứng
+- **Audio**: 2 BGM loop + 8 reusable SFX/footstep files, settings global lưu riêng trong `settings.properties`
+- **State Management**: Character select → Continue/New Game screen → Gameplay loop → Dialog/Multi-quest → Inventory overlay / Cat Care overlay / Audio Settings overlay / Cat calling / Fishing → Auto-save on exit vào slot giới tính tương ứng
 - **Extensibility**: Hỗ trợ Custom Asset thông qua thư mục resources.
 
 Game được thiết kế để mở rộng dễ dàng với Inventory, Save/Load, Minimap, và các quest phụ.

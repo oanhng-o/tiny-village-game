@@ -1,6 +1,7 @@
 module com.game {
     requires javafx.controls;
     requires javafx.graphics;
+    requires javafx.media;
 
     opens com.game to javafx.graphics;
     exports com.game;

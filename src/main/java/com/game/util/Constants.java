@@ -73,6 +73,18 @@ public class Constants {
     public static final String ASSET_INTERACT_ICON = "interact_icon.png";
     public static final String ASSET_FISHING_ROD_ACTION = "fishing_rod_action.png";
 
+    // Audio asset file names
+    public static final String ASSET_AUDIO_MENU_THEME = "menu_theme.mp3";
+    public static final String ASSET_AUDIO_GAMEPLAY_LOOP = "gameplay_loop.mp3";
+    public static final String ASSET_AUDIO_FOOTSTEP_GRASS_1 = "footstep_grass_1.wav";
+    public static final String ASSET_AUDIO_FOOTSTEP_GRASS_2 = "footstep_grass_2.wav";
+    public static final String ASSET_AUDIO_DIALOG_OPEN = "dialog_open.wav";
+    public static final String ASSET_AUDIO_DIALOG_ADVANCE = "dialog_advance.wav";
+    public static final String ASSET_AUDIO_UI_CONFIRM = "ui_confirm.wav";
+    public static final String ASSET_AUDIO_UI_BACK = "ui_back.wav";
+    public static final String ASSET_AUDIO_QUEST_START = "quest_start.wav";
+    public static final String ASSET_AUDIO_QUEST_COMPLETE = "quest_complete.wav";
+
     // ==================== ASSET KEYS (cho AssetManager) ====================
     public static final String KEY_PLAYER = "player";
     public static final String KEY_NPC_GRANDMA = "npc_grandma";
@@ -93,6 +105,34 @@ public class Constants {
     public static final String KEY_FISH_GOLDFISH = "fish_goldfish";
     public static final String KEY_INTERACT_ICON = "interact_icon";
     public static final String KEY_FISHING_ROD_ACTION = "fishing_rod_action";
+
+    // Audio keys
+    public static final String KEY_AUDIO_MENU_THEME = "audio_menu_theme";
+    public static final String KEY_AUDIO_GAMEPLAY_LOOP = "audio_gameplay_loop";
+    public static final String KEY_AUDIO_FOOTSTEP_GRASS_1 = "audio_footstep_grass_1";
+    public static final String KEY_AUDIO_FOOTSTEP_GRASS_2 = "audio_footstep_grass_2";
+    public static final String KEY_AUDIO_DIALOG_OPEN = "audio_dialog_open";
+    public static final String KEY_AUDIO_DIALOG_ADVANCE = "audio_dialog_advance";
+    public static final String KEY_AUDIO_UI_CONFIRM = "audio_ui_confirm";
+    public static final String KEY_AUDIO_UI_BACK = "audio_ui_back";
+    public static final String KEY_AUDIO_QUEST_START = "audio_quest_start";
+    public static final String KEY_AUDIO_QUEST_COMPLETE = "audio_quest_complete";
+
+    // Audio event keys
+    public static final String AUDIO_EVENT_MENU_MUSIC = "menu_music";
+    public static final String AUDIO_EVENT_GAMEPLAY_MUSIC = "gameplay_music";
+    public static final String AUDIO_EVENT_FOOTSTEP = "footstep";
+    public static final String AUDIO_EVENT_DIALOG_OPEN = "dialog_open";
+    public static final String AUDIO_EVENT_DIALOG_ADVANCE = "dialog_advance";
+    public static final String AUDIO_EVENT_CONFIRM = "confirm";
+    public static final String AUDIO_EVENT_BACK = "back";
+    public static final String AUDIO_EVENT_QUEST_START = "quest_start";
+    public static final String AUDIO_EVENT_QUEST_COMPLETE = "quest_complete";
+
+    // Audio defaults
+    public static final double DEFAULT_MUSIC_VOLUME = 0.28;
+    public static final double DEFAULT_SFX_VOLUME = 0.70;
+    public static final double FOOTSTEP_INTERVAL_SECONDS = 0.34;
 
     // ==================== ANIMATION FRAMES ====================
     public static final int PLAYER_ANIMATION_FRAMES = 4; // frames per direction

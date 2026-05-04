@@ -318,11 +318,11 @@ mvn javafx:run
 
 ## Tài liệu liên quan
 
-| Tài liệu | Mô tả | Liên kết |
-| --- | --- | --- |
-| Flow tài liệu | Mô tả chi tiết luồng hoạt động, gameplay loop, quest flow, save/load, audio và kiến trúc tổng quan | [FLOW.md](./FLOW.md) |
-| Test case | Tài liệu kiểm thử | [Test case](https://docs.google.com/spreadsheets/d/1xIlT1jzPOxu9lnSPFEMAB69a8XZO6PQyvwmUJVAmfdU/edit?usp=sharing) |
-| SRS | Tài liệu đặc tả yêu cầu phần mềm | [SRS](https://docs.google.com/document/d/1HzM9H-J6lBm8cWf4Fc2M6EOVEeR2lYyb/edit?usp=sharing&ouid=114131250450428532536&rtpof=true&sd=true) |
+| Tài liệu | Mô tả |
+| --- | --- | 
+| [FLOW.md](./FLOW.md) | Mô tả chi tiết luồng hoạt động, gameplay loop, quest flow, save/load, audio và kiến trúc tổng quan |  
+| [Test case](https://docs.google.com/spreadsheets/d/1xIlT1jzPOxu9lnSPFEMAB69a8XZO6PQyvwmUJVAmfdU/edit?usp=sharing) | Tài liệu kiểm thử |  
+| [SRS](https://docs.google.com/document/d/1HzM9H-J6lBm8cWf4Fc2M6EOVEeR2lYyb/edit?usp=sharing&ouid=114131250450428532536&rtpof=true&sd=true) | Tài liệu đặc tả yêu cầu phần mềm |  
 
 ## Định hướng mở rộng
 

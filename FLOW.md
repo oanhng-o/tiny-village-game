@@ -281,6 +281,7 @@ Khi đóng game:
       └─ Nếu đang có GameWorld -> tự động save snapshot hiện tại vào slot Girl/Boy đúng với world đang chơi
 
 Nếu game bị tắt trong lúc quest `seeds` đang countdown mở lại, khoảng thời gian ngoài game vẫn được trừ vào timer khi người chơi bấm `Continue`; nếu save cũ còn giữ timer lớn hơn delay cấu hình hiện tại, timer đó sẽ bị chặn về đúng mốc đang dùng.
+```
 
 ---
 
@@ -337,7 +338,6 @@ Esc hoặc P          : Đóng overlay
 - Quest reset timer chạy nền.
 - Notification text / badge prompt / cooldown lỗi.
 - Auto-save lúc thoát game.
-```
 
 ---
 
@@ -579,7 +579,7 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
             └─ Hết 60 giây, quest `seeds` tự mở lại
 ```
 
-   ### Inventory Persistent
+### Inventory Persistent
 ```
 InventorySystem
    ├─ Lưu theo save slot hiện tại
@@ -709,22 +709,22 @@ CatFollower.update(dt, player)
    - Cho mèo ăn thành công dùng `ui_confirm.wav`.
    - Vuốt mèo thành công dùng `dialog_advance.wav`.
 
-   ### Quy Trình Cho Ăn
-   ```
-   Player đứng gần mèo + bấm C
+### Quy Trình Cho Ăn
+```
+Player đứng gần mèo + bấm C
+   │
+   └─ Cat Care menu mở ra
       │
-      └─ Cat Care menu mở ra
-         │
-         ├─ InventorySystem.getFishItems()
-         ├─ ↑/↓ chọn cá muốn dùng
-         ├─ Enter xác nhận
-         │   ├─ Nếu feed cooldown > 0: hiện notification chờ cooldown
-         │   ├─ Nếu có cá: consume 1 item từ inventory
-         │   ├─ CatFollower.feed()
-         │   └─ Tăng mood + affection, có thể tăng heart level
-         │
-         └─ C/Esc đóng menu
-   ```
+      ├─ InventorySystem.getFishItems()
+      ├─ ↑/↓ chọn cá muốn dùng
+      ├─ Enter xác nhận
+      │   ├─ Nếu feed cooldown > 0: hiện notification chờ cooldown
+      │   ├─ Nếu có cá: consume 1 item từ inventory
+      │   ├─ CatFollower.feed()
+      │   └─ Tăng mood + affection, có thể tăng heart level
+      │
+      └─ C/Esc đóng menu
+```
 
 ---
 
@@ -746,8 +746,6 @@ Camera.update(player, gameWorld)
       ├─ Chỉ render tiles trong viewport
       ├─ Offset bằng camera position
       └─ Smooth scrolling
-```
-
 ```
 
 ---
@@ -1272,22 +1270,22 @@ src/main/java/com/game/
 │       └─ Shared settings overlay cho front screen và gameplay
 │
 └── world/
-    ├── GameWorld.java (Manager)
-    │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
-    │   ├─ update(dt, inputHandler)
-    │   ├─ render(gc)
-    │   ├─ renderInventoryOverlay(gc)
+   ├── GameWorld.java (Manager)
+   │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
+   │   ├─ update(dt, inputHandler)
+   │   ├─ render(gc)
+   │   ├─ renderInventoryOverlay(gc)
    │   ├─ renderCatCareOverlay(gc)
    │   └─ Audio overlay + footstep gating
-    │
-    ├── Tile.java (enum)
-    │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
-    │   └─ solid, sprite coords
-    │
-    └── TileMap.java
-        ├─ 2D int array map (40x30)
-        ├─ getTile(), isSolid()
-        └─ render(gc, camera) with culling
+   │
+   ├── Tile.java (enum)
+   │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
+   │   └─ solid, sprite coords
+   │
+   └── TileMap.java
+      ├─ 2D int array map (40x30)
+      ├─ getTile(), isSolid()
+      └─ render(gc, camera) with culling
 ```
 
 ---

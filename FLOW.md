@@ -255,7 +255,7 @@ Khi Character Selection hoàn tất:
 - Notification tạm thời
 - Cooldown pet/feed/call đang đếm
 
-Load luôn khôi phục tiến trình dài hạn, bao gồm cả vị trí quest item đang hoạt động, đồng thời trừ thời gian offline khỏi countdown quest lặp trước khi vào gameplay, và reset các state tạm để tránh quay lại giữa một tương tác dở dang.
+Load luôn khôi phục tiến trình dài hạn, bao gồm cả vị trí quest item đang hoạt động, đồng thời trừ thời gian offline khỏi countdown quest lặp trước khi vào gameplay. Với quest `seeds`, timer được chuẩn hóa theo delay cấu hình hiện tại trước khi world mới áp dụng save, rồi reset các state tạm để tránh quay lại giữa một tương tác dở dang.
 
 ### Continue / New Game Flow
 ```
@@ -280,7 +280,8 @@ Khi đóng game:
    └─ Application.stop()
       └─ Nếu đang có GameWorld -> tự động save snapshot hiện tại vào slot Girl/Boy đúng với world đang chơi
 
-Nếu game bị tắt trong lúc quest `seeds` đang countdown mở lại, khoảng thời gian ngoài game vẫn được trừ vào timer khi người chơi bấm `Continue`.
+Nếu game bị tắt trong lúc quest `seeds` đang countdown mở lại, khoảng thời gian ngoài game vẫn được trừ vào timer khi người chơi bấm `Continue`; nếu save cũ còn giữ timer lớn hơn delay cấu hình hiện tại, timer đó sẽ bị chặn về đúng mốc đang dùng.
+```
 
 ---
 
@@ -337,7 +338,6 @@ Esc hoặc P          : Đóng overlay
 - Quest reset timer chạy nền.
 - Notification text / badge prompt / cooldown lỗi.
 - Auto-save lúc thoát game.
-```
 
 ---
 
@@ -519,14 +519,14 @@ Riêng quest `seeds` là quest lặp: sau khi `COMPLETED`, quest indicator giữ
 - Dialog hiển thị lời cảm ơn trước
 - QuestSystem.completeQuest("seeds") → COMPLETED
 - Quest indicator hiển thị `✓ Hoàn thành!` trong 10 giây đầu
-- Sau 10 giây, cùng quest đó đổi sang countdown 3600 giây trước khi quest tự mở lại
+- Sau 10 giây, cùng quest đó đổi sang countdown phần còn lại của mốc 60 giây trước khi quest tự mở lại
 
 **Kết Quả:**
 - Random 1 reward từ pool `rose`, `sunflower`, `tulip`, `bonsai`
 - Thêm reward vào InventorySystem persistent
 - Hiện notification tên phần thưởng nhận được
 - Quest indicator đổi từ trạng thái thành công sang countdown mở lại sau 10 giây
-- Hết 3600 giây: quest reset về `NOT_STARTED`, item Seeds được phép xuất hiện lại ở lần nhận mới
+- Hết 60 giây: quest reset về `NOT_STARTED`, item Seeds được phép xuất hiện lại ở lần nhận mới
 - Không kích hoạt CatFollower; quest `fishing_rod` chỉ mở khóa việc gọi và chăm mèo
 
 ---
@@ -576,10 +576,10 @@ Quest `seeds` ACTIVE + player đã nhặt Seeds
             ├─ Hiện notification tên phần thưởng
             ├─ 10 giây đầu: quest indicator hiển thị `✓ Hoàn thành!`
             ├─ Sau đó: quest indicator đổi sang countdown mở lại
-            └─ Hết 3600 giây, quest `seeds` tự mở lại
+            └─ Hết 60 giây, quest `seeds` tự mở lại
 ```
 
-   ### Inventory Persistent
+### Inventory Persistent
 ```
 InventorySystem
    ├─ Lưu theo save slot hiện tại
@@ -709,22 +709,22 @@ CatFollower.update(dt, player)
    - Cho mèo ăn thành công dùng `ui_confirm.wav`.
    - Vuốt mèo thành công dùng `dialog_advance.wav`.
 
-   ### Quy Trình Cho Ăn
-   ```
-   Player đứng gần mèo + bấm C
+### Quy Trình Cho Ăn
+```
+Player đứng gần mèo + bấm C
+   │
+   └─ Cat Care menu mở ra
       │
-      └─ Cat Care menu mở ra
-         │
-         ├─ InventorySystem.getFishItems()
-         ├─ ↑/↓ chọn cá muốn dùng
-         ├─ Enter xác nhận
-         │   ├─ Nếu feed cooldown > 0: hiện notification chờ cooldown
-         │   ├─ Nếu có cá: consume 1 item từ inventory
-         │   ├─ CatFollower.feed()
-         │   └─ Tăng mood + affection, có thể tăng heart level
-         │
-         └─ C/Esc đóng menu
-   ```
+      ├─ InventorySystem.getFishItems()
+      ├─ ↑/↓ chọn cá muốn dùng
+      ├─ Enter xác nhận
+      │   ├─ Nếu feed cooldown > 0: hiện notification chờ cooldown
+      │   ├─ Nếu có cá: consume 1 item từ inventory
+      │   ├─ CatFollower.feed()
+      │   └─ Tăng mood + affection, có thể tăng heart level
+      │
+      └─ C/Esc đóng menu
+```
 
 ---
 
@@ -746,8 +746,6 @@ Camera.update(player, gameWorld)
       ├─ Chỉ render tiles trong viewport
       ├─ Offset bằng camera position
       └─ Smooth scrolling
-```
-
 ```
 
 ---
@@ -977,7 +975,7 @@ Player.update():
    - Random reward: rose / sunflower / tulip / bonsai
    - InventorySystem stores reward with quantity x1
    - Notification shows reward name
-   - Sau 3600 giây, quest `seeds` quay lại trạng thái chưa nhận để có thể làm vòng mới
+   - Sau 60 giây, quest `seeds` quay lại trạng thái chưa nhận để có thể làm vòng mới
 
 8. [FISHING & INVENTORY]
    Player đứng gần hồ sau khi có cần câu:
@@ -1008,7 +1006,7 @@ Player.update():
    - Close game → app tự động save lại lần cuối vào đúng slot giới tính
    - Mở lại game → Character Selection → Continue / New Game Screen → chọn Continue để load slot tương ứng
    - Nếu quest item đang active nhưng chưa nhặt, game restore lại đúng vị trí spawn trước khi thoát
-   - Nếu countdown mở lại của quest `seeds` đã trôi bớt trong lúc game tắt, timer sau khi load sẽ giảm tương ứng; nếu đã hết giờ thì quest tự mở lại ngay
+   - Nếu countdown mở lại của quest `seeds` đã trôi bớt trong lúc game tắt, timer sau khi load sẽ giảm tương ứng; nếu save cũ còn timer dài hơn mốc hiện tại thì game sẽ chuẩn hóa xuống delay cấu hình mới; nếu đã hết giờ thì quest tự mở lại ngay
 
 12. [END]
    User closes window → Application.stop()
@@ -1138,7 +1136,7 @@ Optimization Techniques:
       │                   │
       │                   ├─ If seeds: random garden reward
       │                   │    ├─ InventorySystem.addRandomGardenReward()
-      │                   │    └─ Sau 3600 giây -> [QUEST AVAILABLE AGAIN]
+      │                   │    └─ Sau 60 giây -> [QUEST AVAILABLE AGAIN]
       │                   │
       │                   └─ Continue gameplay
       │
@@ -1272,22 +1270,22 @@ src/main/java/com/game/
 │       └─ Shared settings overlay cho front screen và gameplay
 │
 └── world/
-    ├── GameWorld.java (Manager)
-    │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
-    │   ├─ update(dt, inputHandler)
-    │   ├─ render(gc)
-    │   ├─ renderInventoryOverlay(gc)
+   ├── GameWorld.java (Manager)
+   │   ├─ TileMap, Player, NPCs, Items, Cat, Camera, InventorySystem
+   │   ├─ update(dt, inputHandler)
+   │   ├─ render(gc)
+   │   ├─ renderInventoryOverlay(gc)
    │   ├─ renderCatCareOverlay(gc)
    │   └─ Audio overlay + footstep gating
-    │
-    ├── Tile.java (enum)
-    │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
-    │   └─ solid, sprite coords
-    │
-    └── TileMap.java
-        ├─ 2D int array map (40x30)
-        ├─ getTile(), isSolid()
-        └─ render(gc, camera) with culling
+   │
+   ├── Tile.java (enum)
+   │   ├─ GRASS, WATER, PATH, TREE, BENCH, FENCE, BRIDGE
+   │   └─ solid, sprite coords
+   │
+   └── TileMap.java
+      ├─ 2D int array map (40x30)
+      ├─ getTile(), isSolid()
+      └─ render(gc, camera) with culling
 ```
 
 ---

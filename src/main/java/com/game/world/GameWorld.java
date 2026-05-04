@@ -35,7 +35,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class GameWorld {
 
-    private static final double SEEDS_QUEST_RESET_DELAY_SECONDS = 3600.0;
+    private static final double SEEDS_QUEST_RESET_DELAY_SECONDS = 60.0;
     private static final double SEEDS_QUEST_COMPLETION_BANNER_SECONDS = 10.0;
 
     private TileMap tileMap;
@@ -124,7 +124,9 @@ public class GameWorld {
                 questResetTimers.put(QuestSystem.SEEDS_QUEST_ID, SEEDS_QUEST_RESET_DELAY_SECONDS);
                 InventorySystem.InventoryItem reward = inventorySystem.addRandomGardenReward();
                 showPickupNotification(
-                        "🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName() + "! Quest sẽ mở lại sau 3600 giây.");
+                        "🌱 Bác làm vườn tặng bạn: " + reward.getDisplayName()
+                                + "! Quest sẽ mở lại sau " + formatQuestResetDelay(SEEDS_QUEST_RESET_DELAY_SECONDS)
+                                + ".");
             }
         });
     }
@@ -670,8 +672,7 @@ public class GameWorld {
 
     public void applySaveData(SaveData saveData) {
         questSystem.replaceQuestStates(saveData.questStates());
-        questResetTimers.clear();
-        questResetTimers.putAll(saveData.questTimers());
+        restoreQuestResetTimers(saveData.questTimers());
         questSystem.replaceCollectedItems(saveData.collectedQuestItems());
         restoreQuestItemPositions(saveData.questItemPositions());
         inventorySystem.replaceItemCounts(saveData.inventoryItems());
@@ -717,6 +718,32 @@ public class GameWorld {
             }
             item.setVisible(shouldBeVisible);
         }
+    }
+
+    private void restoreQuestResetTimers(Map<String, Double> savedQuestTimers) {
+        questResetTimers.clear();
+        if (savedQuestTimers == null) {
+            return;
+        }
+
+        for (Map.Entry<String, Double> entry : savedQuestTimers.entrySet()) {
+            double remainingSeconds = normalizeQuestResetTimer(entry.getKey(), entry.getValue());
+            if (remainingSeconds > 0) {
+                questResetTimers.put(entry.getKey(), remainingSeconds);
+            }
+        }
+    }
+
+    private double normalizeQuestResetTimer(String questId, Double remainingSeconds) {
+        if (remainingSeconds == null) {
+            return 0;
+        }
+
+        double sanitizedRemaining = Math.max(0.0, remainingSeconds);
+        if (QuestSystem.SEEDS_QUEST_ID.equals(questId)) {
+            return Math.min(sanitizedRemaining, SEEDS_QUEST_RESET_DELAY_SECONDS);
+        }
+        return sanitizedRemaining;
     }
 
     private void updateQuestResetTimers(double dt) {
@@ -1101,6 +1128,10 @@ public class GameWorld {
 
     private String formatCooldown(double remaining) {
         return (int) Math.ceil(Math.max(0.0, remaining)) + "s";
+    }
+
+    private String formatQuestResetDelay(double remaining) {
+        return (int) Math.ceil(Math.max(0.0, remaining)) + " giây";
     }
 
     private String formatCooldownStatus(double remaining) {

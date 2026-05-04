@@ -65,6 +65,10 @@ public class GameWorld {
     private double pickupTimer = 0;
     private final Map<String, Double> questResetTimers = new LinkedHashMap<>();
 
+    public GameWorld(boolean isGirl) {
+        this(isGirl, AudioSettings.defaults(), null);
+    }
+
     public GameWorld(boolean isGirl, AudioSettings audioSettings, AudioSettingsStore audioSettingsStore) {
         this.isGirl = isGirl;
         this.audioSettings = audioSettings;
